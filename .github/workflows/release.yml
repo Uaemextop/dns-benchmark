@@ -1,0 +1,124 @@
+name: Build and Release
+
+on:
+  # 当推送 tag 时触发
+  push:
+    tags:
+      - 'v*.*.*'
+  # 支持手动触发
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Tag name for the release (e.g., v1.0.0)'
+        required: true
+        type: string
+      prerelease:
+        description: 'Mark as pre-release'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  build:
+    name: Build and Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.2'
+          cache: true
+          cache-dependency-path: dnspy/go.sum
+
+      - name: Get version
+        id: version
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "VERSION=${{ inputs.tag_name }}" >> $GITHUB_OUTPUT
+            echo "TAG_NAME=${{ inputs.tag_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+            echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build binaries
+        working-directory: dnspy
+        run: |
+          go mod tidy
+          
+          # Build for all platforms
+          GOOS=darwin GOARCH=amd64 go build -ldflags "-s -w -X main.version=${{ steps.version.outputs.VERSION }}" -tags release -o dnspy-darwin-amd64 .
+          GOOS=darwin GOARCH=arm64 go build -ldflags "-s -w -X main.version=${{ steps.version.outputs.VERSION }}" -tags release -o dnspy-darwin-arm64 .
+          GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -X main.version=${{ steps.version.outputs.VERSION }}" -tags release -o dnspy-linux-amd64 .
+          GOOS=linux GOARCH=arm64 go build -ldflags "-s -w -X main.version=${{ steps.version.outputs.VERSION }}" -tags release -o dnspy-linux-arm64 .
+          GOOS=windows GOARCH=amd64 go build -ldflags "-s -w -X main.version=${{ steps.version.outputs.VERSION }}" -tags release -o dnspy-windows-amd64.exe .
+          GOOS=windows GOARCH=arm64 go build -ldflags "-s -w -X main.version=${{ steps.version.outputs.VERSION }}" -tags release -o dnspy-windows-arm64.exe .
+
+      - name: Generate checksums
+        working-directory: dnspy
+        run: |
+          sha256sum dnspy-* > checksums.txt
+          cat checksums.txt
+
+      - name: Create Release
+        if: github.event_name == 'push'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.TAG_NAME }}
+          name: Release ${{ steps.version.outputs.VERSION }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            dnspy/dnspy-darwin-amd64
+            dnspy/dnspy-darwin-arm64
+            dnspy/dnspy-linux-amd64
+            dnspy/dnspy-linux-arm64
+            dnspy/dnspy-windows-amd64.exe
+            dnspy/dnspy-windows-arm64.exe
+            dnspy/checksums.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create Release (Manual)
+        if: github.event_name == 'workflow_dispatch'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.TAG_NAME }}
+          name: Release ${{ steps.version.outputs.VERSION }}
+          draft: false
+          prerelease: ${{ inputs.prerelease }}
+          generate_release_notes: true
+          files: |
+            dnspy/dnspy-darwin-amd64
+            dnspy/dnspy-darwin-arm64
+            dnspy/dnspy-linux-amd64
+            dnspy/dnspy-linux-arm64
+            dnspy/dnspy-windows-amd64.exe
+            dnspy/dnspy-windows-arm64.exe
+            dnspy/checksums.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dnspy-binaries-${{ steps.version.outputs.VERSION }}
+          path: |
+            dnspy/dnspy-darwin-amd64
+            dnspy/dnspy-darwin-arm64
+            dnspy/dnspy-linux-amd64
+            dnspy/dnspy-linux-arm64
+            dnspy/dnspy-windows-amd64.exe
+            dnspy/dnspy-windows-arm64.exe
+            dnspy/checksums.txt
+          retention-days: 30
+
