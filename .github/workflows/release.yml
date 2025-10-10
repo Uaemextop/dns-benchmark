@@ -4,16 +4,16 @@ on:
   # 当推送 tag 时触发
   push:
     tags:
-      - 'v*.*.*'
+      - "v*.*.*"
   # 支持手动触发
   workflow_dispatch:
     inputs:
       tag_name:
-        description: 'Tag name for the release (e.g., v1.0.0)'
+        description: "Tag name for the release (e.g., v1.0.0)"
         required: true
         type: string
       prerelease:
-        description: 'Mark as pre-release'
+        description: "Mark as pre-release"
         required: false
         type: boolean
         default: false
@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -34,7 +34,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.23.2'
+          go-version: "1.23.2"
           cache: true
           cache-dependency-path: dnspy/go.sum
 
@@ -49,11 +49,28 @@ jobs:
             echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
           fi
 
+      - name: Update data
+        working-directory: dnspy
+        run: |
+          curl https://cdn.jsdelivr.net/gh/Loyalsoldier/geoip@release/Country.mmdb -o ./res/Country.mmdb
+          curl https://cdn.jsdelivr.net/gh/Tantalor93/dnspyre@master/data/10000-domains -o ./res/domains.txt
+
+      - name: Build dnspyre
+        working-directory: dnspy
+        run: |
+          go get github.com/tantalor93/dnspyre/v3@latest
+          GOOS=darwin GOARCH=amd64 go build -ldflags "-s -w" -o ./res/dnspyre-darwin-amd64 github.com/tantalor93/dnspyre/v3
+          GOOS=darwin GOARCH=arm64 go build -ldflags "-s -w" -o ./res/dnspyre-darwin-arm64 github.com/tantalor93/dnspyre/v3
+          GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -o ./res/dnspyre-linux-amd64 github.com/tantalor93/dnspyre/v3
+          GOOS=linux GOARCH=arm64 go build -ldflags "-s -w" -o ./res/dnspyre-linux-arm64 github.com/tantalor93/dnspyre/v3
+          GOOS=windows GOARCH=amd64 go build -ldflags "-s -w" -o ./res/dnspyre-windows-amd64.exe github.com/tantalor93/dnspyre/v3
+          GOOS=windows GOARCH=arm64 go build -ldflags "-s -w" -o ./res/dnspyre-windows-arm64.exe github.com/tantalor93/dnspyre/v3
+
       - name: Build binaries
         working-directory: dnspy
         run: |
           go mod tidy
-          
+
           # Build for all platforms
           GOOS=darwin GOARCH=amd64 go build -ldflags "-s -w -X main.version=${{ steps.version.outputs.VERSION }}" -tags release -o dnspy-darwin-amd64 .
           GOOS=darwin GOARCH=arm64 go build -ldflags "-s -w -X main.version=${{ steps.version.outputs.VERSION }}" -tags release -o dnspy-darwin-arm64 .
@@ -121,4 +138,3 @@ jobs:
             dnspy/dnspy-windows-arm64.exe
             dnspy/checksums.txt
           retention-days: 30
-
