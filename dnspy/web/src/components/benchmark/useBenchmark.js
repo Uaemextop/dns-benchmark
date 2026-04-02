@@ -126,7 +126,7 @@ export function useBenchmark(t) {
       if (!res.ok) {
         const err = await res.json();
         toast.error(t("gui.benchmark_error"), {
-          description: err.error || "Failed to start",
+          description: err.error || "Failed to start benchmark",
           duration: 5000,
           className: "dark:text-neutral-200",
         });

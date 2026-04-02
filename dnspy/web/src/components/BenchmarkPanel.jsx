@@ -46,7 +46,7 @@ import {
 } from "./benchmark";
 import { computeStats, isAlive } from "./benchmark/utils";
 
-// Register Chart.js components once at module level
+// Register Chart.js components (safe to call multiple times — Chart.js deduplicates)
 ChartJS.register(
   CategoryScale,
   LinearScale,
