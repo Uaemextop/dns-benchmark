@@ -42,7 +42,7 @@ const App = () => {
             <Analyze />
           )}
         </ErrorBoundary>
-        <Footer>
+        <Footer />
       </FileProvider>
     </div>
   );
