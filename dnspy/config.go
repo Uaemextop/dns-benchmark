@@ -26,6 +26,7 @@ type Config struct {
 	// GUI mode
 	GUI     bool // Start GUI mode (local web interface)
 	GUIPort int  // GUI server port
+	CLI     bool // Force CLI mode (override automatic GUI launch)
 	// Feature flags
 	InputResultJsonPath string // Input result JSON file path (relative to working directory)
 	FnGeo               string // Use GeoIP database for IP geolocation queries
@@ -45,18 +46,21 @@ func InitFlags() (Config, error) {
 	flag.BoolVar(&cfg.NoAAAARecord, "no-aaaa", false, "\x1b[32mDo not resolve AAAA records in each test (skip IPv6 testing)\x1b[0m\n")
 	flag.StringVarP(&cfg.OutputPath, "output", "o", "", "\x1b[32mOutput result file path\nMust be relative to the current working directory\nIf not specified, outputs to dnspy_result_<current_time>.json in the current directory\x1b[0m\n")
 	flag.BoolVar(&cfg.OldIsToHTML, "old-html", false, "\x1b[32mDeprecated, not recommended\nRecommended: Program outputs a JSON file, follow prompts to view visual analysis\nTo view again later, open the JSON file directly with the program\nThis parameter uses the legacy method to output a single HTML file alongside the JSON data\nCan be opened by double-clicking\x1b[0m\n")
-	flag.BoolVar(&cfg.GUI, "gui", false, "\x1b[32mStart GUI mode: launches a local web interface for configuring and running benchmarks\x1b[0m\n")
+	flag.BoolVar(&cfg.GUI, "gui", false, "\x1b[32mStart GUI mode: launches a local web interface for configuring and running benchmarks\nThis is the default when running without any arguments\x1b[0m\n")
 	flag.IntVar(&cfg.GUIPort, "port", 8080, "\x1b[32mPort for the GUI web server (used with --gui)\x1b[0m\n")
+	flag.BoolVar(&cfg.CLI, "cli", false, "\x1b[32mForce CLI mode instead of launching the GUI\x1b[0m\n")
 	flag.StringVarP(&cfg.FnGeo, "geo", "g", "", "\x1b[32mStandalone feature: Query IP or domain geolocation using GeoIP database\x1b[0m\n")
 	// Usage instructions
 	flag.Usage = func() {
 		fmt.Print("Usage examples:\n\n" +
 			"\x1b[33mdnspy\x1b[0m\n\n" +
-			"\x1b[32mStart testing directly using built-in worldwide DNS servers\x1b[0m\n\n" +
+			"\x1b[32mLaunch GUI mode (default when double-clicking the executable)\x1b[0m\n\n" +
+			"\x1b[33mdnspy --cli\x1b[0m\n\n" +
+			"\x1b[32mStart CLI mode using built-in worldwide DNS servers\x1b[0m\n\n" +
 			"\x1b[33mdnspy -s 114.114.114.114\x1b[0m\n\n" +
-			"\x1b[32mTest a single server\x1b[0m\n\n" +
-			"\x1b[33mdnspy --gui\x1b[0m\n\n" +
-			"\x1b[32mStart GUI mode: launches a local web interface for configuring and running benchmarks\x1b[0m\n\n" +
+			"\x1b[32mTest a single server (CLI mode)\x1b[0m\n\n" +
+			"\x1b[33mdnspy --gui --port 3000\x1b[0m\n\n" +
+			"\x1b[32mLaunch GUI on a custom port\x1b[0m\n\n" +
 			"\x1b[33mdnspy dnspy_benchmark_2024-10-22-08-18.json\x1b[0m\n\n" +
 			"\x1b[32mVisualize and analyze test results\x1b[0m\n\n" +
 			"Parameters:\n")
@@ -110,6 +114,24 @@ func InitFlags() (Config, error) {
 
 	if exitTrigger {
 		os.Exit(0)
+	}
+
+	// Determine if any CLI-specific flags were explicitly provided
+	cliMode := cfg.CLI
+	if !cliMode {
+		flag.Visit(func(f *flag.Flag) {
+			switch f.Name {
+			case "server", "file", "duration", "concurrency", "worker",
+				"no-aaaa", "output", "old-html", "domains":
+				cliMode = true
+			}
+		})
+	}
+
+	// Default to GUI mode when no CLI flags or arguments are provided
+	// (e.g., when double-clicking the executable)
+	if !cliMode && !cfg.GUI && len(otherFlags) == 0 {
+		cfg.GUI = true
 	}
 
 	// GUI mode: skip server prompts, the web interface handles configuration
