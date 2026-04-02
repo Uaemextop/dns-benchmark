@@ -2,10 +2,8 @@ package main
 
 import (
 	"context"
-	"embed"
 	"encoding/json"
 	"fmt"
-	"io/fs"
 	"math/rand"
 	"net/http"
 	"os"
@@ -467,16 +465,12 @@ func StartGUI(port int) {
 
 	mux := http.NewServeMux()
 
-	// Serve embedded web UI.
-	webFS, err := GetWebUIData()
+	// Serve web UI (embedded in release, from disk in debug).
+	webFS, err := GetWebUIFS()
 	if err != nil {
 		log.WithError(err).Fatal("Cannot load web UI data")
 	}
-	subFS, err := fs.Sub(webFS, "web/dist")
-	if err != nil {
-		log.WithError(err).Fatal("Cannot access web UI subdirectory")
-	}
-	fileServer := http.FileServer(http.FS(subFS))
+	fileServer := http.FileServer(http.FS(webFS))
 	mux.Handle("/", fileServer)
 
 	// API routes.
@@ -512,9 +506,5 @@ func StartGUI(port int) {
 	}
 }
 
-// GetWebUIData returns the embedded web UI filesystem.
-// This declaration is satisfied by gui_data_release.go or gui_data_debug.go.
-// Uncomment or provide the actual implementation in the appropriate build-tagged file.
-var GetWebUIData = func() (embed.FS, error) {
-	return embed.FS{}, fmt.Errorf("web UI data not available: build with appropriate tags or provide gui_data files")
-}
+// GetWebUIFS is defined in gui_data_release.go (embed) and gui_data_debug.go (filesystem).
+// It returns an fs.FS rooted at the web/dist directory.

@@ -23,6 +23,9 @@ type Config struct {
 	Workers         int      // Number of DNS servers to test simultaneously
 	OutputPath      string   // Output result file path (relative to working directory)
 	OldIsToHTML     bool     // Use legacy method to output data to a single HTML file
+	// GUI mode
+	GUI     bool // Start GUI mode (local web interface)
+	GUIPort int  // GUI server port
 	// Feature flags
 	InputResultJsonPath string // Input result JSON file path (relative to working directory)
 	FnGeo               string // Use GeoIP database for IP geolocation queries
@@ -42,6 +45,8 @@ func InitFlags() (Config, error) {
 	flag.BoolVar(&cfg.NoAAAARecord, "no-aaaa", false, "\x1b[32mDo not resolve AAAA records in each test (skip IPv6 testing)\x1b[0m\n")
 	flag.StringVarP(&cfg.OutputPath, "output", "o", "", "\x1b[32mOutput result file path\nMust be relative to the current working directory\nIf not specified, outputs to dnspy_result_<current_time>.json in the current directory\x1b[0m\n")
 	flag.BoolVar(&cfg.OldIsToHTML, "old-html", false, "\x1b[32mDeprecated, not recommended\nRecommended: Program outputs a JSON file, follow prompts to view visual analysis\nTo view again later, open the JSON file directly with the program\nThis parameter uses the legacy method to output a single HTML file alongside the JSON data\nCan be opened by double-clicking\x1b[0m\n")
+	flag.BoolVar(&cfg.GUI, "gui", false, "\x1b[32mStart GUI mode: launches a local web interface for configuring and running benchmarks\x1b[0m\n")
+	flag.IntVar(&cfg.GUIPort, "port", 8080, "\x1b[32mPort for the GUI web server (used with --gui)\x1b[0m\n")
 	flag.StringVarP(&cfg.FnGeo, "geo", "g", "", "\x1b[32mStandalone feature: Query IP or domain geolocation using GeoIP database\x1b[0m\n")
 	// Usage instructions
 	flag.Usage = func() {
@@ -103,6 +108,11 @@ func InitFlags() (Config, error) {
 
 	if exitTrigger {
 		os.Exit(0)
+	}
+
+	// GUI mode: skip server prompts, the web interface handles configuration
+	if cfg.GUI {
+		return cfg, nil
 	}
 
 	if cfg.ServersDataPath == "" && len(cfg.Servers) == 0 {
