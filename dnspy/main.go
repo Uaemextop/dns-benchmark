@@ -17,7 +17,7 @@ import (
 
 const TemplateHTMLPlaceholder = "__JSON_DATA_PLACEHOLDER__"
 
-// 全局变量
+// Global variables
 var (
 	Cfg            Config
 	GeoDB          *geoip2.Reader
@@ -36,17 +36,17 @@ func main() {
 	nowTime := time.Now()
 	InitLog(false, "info")
 
-	// 初始化配置
+	// Initialize configuration
 	if Cfg, err = InitFlags(); err != nil {
 		log.WithFields(log.Fields{
-			"错误": err,
-		}).Fatal("\x1b[31m没有有效数据,程序退出\x1b[0m")
+			"error": err,
+		}).Fatal("\x1b[31mNo valid data, program exit\x1b[0m")
 	}
 	Servers = Cfg.Servers
 
 	InitLog(Cfg.LogJSON, Cfg.LogLevel)
 
-	// 初始化输出文件
+	// Initialize output file
 	OutputPath = Cfg.OutputPath
 	if OutputPath == "" {
 		OutputPath = fmt.Sprintf("dnspy_result_%s.json", nowTime.Local().Format("2006-01-02-15-04-05"))
@@ -57,66 +57,66 @@ func main() {
 	OutputFile, err = os.Create(OutputPath)
 	if err != nil {
 		log.WithFields(log.Fields{
-			"错误":   err,
-			"输出文件": OutputPath,
-		}).Fatal("\x1b[31m无法创建输出文件\x1b[0m")
+			"error":       err,
+			"output_file": OutputPath,
+		}).Fatal("\x1b[31mCannot create output file\x1b[0m")
 	}
 	defer OutputFile.Close()
 
 	log.WithFields(log.Fields{
-		"输出文件": OutputPath,
-	}).Infof("\x1b[32m结果输出到文件\x1b[0m")
+		"output_file": OutputPath,
+	}).Infof("\x1b[32mResults will be written to file\x1b[0m")
 
-	// 初始化 GeoIP 数据库
+	// Initialize GeoIP database
 	GeoDB, err = InitGeoDB()
 	if err != nil {
 		log.WithFields(log.Fields{
-			"错误": err,
-		}).Fatal("\x1b[31m无法打开GeoIP数据库\x1b[0m")
+			"error": err,
+		}).Fatal("\x1b[31mCannot open GeoIP database\x1b[0m")
 	}
 	defer GeoDB.Close()
 
-	// 主函数流程
+	// Main function flow
 	WorkDir, err = os.Getwd()
 	if err != nil {
 		log.WithFields(log.Fields{
-			"错误": err,
-		}).Fatal("\x1b[31m无法获取当前工作目录\x1b[0m")
+			"error": err,
+		}).Fatal("\x1b[31mCannot get current working directory\x1b[0m")
 	}
 
-	// 在临时文件夹中取一个文件夹
+	// Create a temporary directory
 	TempDir, err = os.MkdirTemp("", "dnspy")
 	if err != nil {
 		log.WithFields(log.Fields{
-			"错误": err,
-		}).Fatal("\x1b[31m无法创建临时文件夹\x1b[0m")
+			"error": err,
+		}).Fatal("\x1b[31mCannot create temporary directory\x1b[0m")
 	}
 	defer os.RemoveAll(TempDir)
-	// log.Infof("临时文件夹: %s", TempDir)
+	// log.Infof("Temporary directory: %s", TempDir)
 
-	// 配置域名数据
+	// Configure domain data
 	if Cfg.DomainsDataPath == "@sampleDomains@" {
 		domainsData, _ := GetDomainsData()
 		DomainsBinPath = filepath.Join(TempDir, "domains")
 		err := os.WriteFile(DomainsBinPath, domainsData, 0644)
 		if err != nil {
 			log.WithFields(log.Fields{
-				"错误": err,
-			}).Fatal("\x1b[31m无法导出域名数据\x1b[0m")
+				"error": err,
+			}).Fatal("\x1b[31mCannot export domain data\x1b[0m")
 		}
 	} else {
-		// 取 Cfg.DomainsDataPath 相对 WorkDir 的文件路径
+		// Get DomainsDataPath relative to WorkDir
 		DomainsBinPath = filepath.Join(WorkDir, Cfg.DomainsDataPath)
 		if _, err := os.Stat(DomainsBinPath); os.IsNotExist(err) {
 			log.WithFields(log.Fields{
-				"错误": err,
-			}).Fatal("\x1b[31m输入的域名数据文件不存在\x1b[0m")
+				"error": err,
+			}).Fatal("\x1b[31mInput domain data file does not exist\x1b[0m")
 		}
 	}
 
-	// log.Info("导出域名数据路径: ", DomainsBinPath)
+	// log.Info("Domain data path: ", DomainsBinPath)
 
-	// 读取服务器列表文件
+	// Read server list file
 	if Cfg.ServersDataPath == "@sampleServers@" {
 		serversData, _ := GetSampleServersData()
 		Servers, err = FormatListData(&serversData)
@@ -125,46 +125,46 @@ func main() {
 			Servers, err = FormatListFile(Cfg.ServersDataPath)
 			if err != nil {
 				log.WithFields(log.Fields{
-					"错误": err,
-				}).Fatal("\x1b[31m无法格式化服务器列表文件\x1b[0m")
+					"error": err,
+				}).Fatal("\x1b[31mCannot format server list file\x1b[0m")
 			}
 		}
 	}
 
-	log.Infof("需要测试的服务器数量: %d", len(Servers))
+	log.Infof("Number of servers to test: %d", len(Servers))
 
-	// 导出 dnspyre 二进制文件
+	// Export dnspyre binary
 	dnspyreBinData, filename := GetDnspyreBin()
 	DnspyreBinPath = filepath.Join(TempDir, filename)
 	err = os.WriteFile(DnspyreBinPath, dnspyreBinData, 0755)
 	if err != nil {
 		log.WithFields(log.Fields{
-			"错误": err,
-		}).Fatal("\x1b[31m无法写入 dnspyre 二进制文件\x1b[0m")
+			"error": err,
+		}).Fatal("\x1b[31mCannot write dnspyre binary file\x1b[0m")
 	}
 
 	serverCount := len(Servers)
-	// 检查是否有有效数据
+	// Check for valid data
 	if Cfg.Workers == 0 || serverCount == 0 {
-		log.Fatal("\x1b[31m没有有效数据,程序退出\x1b[0m")
+		log.Fatal("\x1b[31mNo valid data, program exit\x1b[0m")
 	}
 
-	// 初始化测试结果
+	// Initialize test results
 	RetData = make(map[string]jsonResult, serverCount)
-	var mu sync.Mutex // 添加互斥锁
+	var mu sync.Mutex // Mutex lock
 
-	// 生成0到1之间的随机小数，保留两位小数
+	// Generate a random decimal between 0 and 1, rounded to two decimal places
 	randomGenerator := rand.New(rand.NewSource(nowTime.UnixNano()))
 	randomNum := Round(randomGenerator.Float64(), 2)
 
-	// 单线程测试
+	// Single-threaded testing
 	if Cfg.Workers == 1 {
 		for _, server := range Servers {
 			output := runDnspyre(GeoDB, Cfg.PreferIPv4, Cfg.NoAAAARecord, DnspyreBinPath, server, DomainsBinPath, Cfg.Duration, Cfg.Concurrency, randomNum)
 			RetData[server] = output
 		}
 	} else {
-		// 多线程测试,使用 Cfg.Workers 控制一次最多开启的线程数
+		// Multi-threaded testing, use Cfg.Workers to control max concurrent threads
 		var wg sync.WaitGroup
 		semaphore := make(chan struct{}, Cfg.Workers)
 
@@ -175,50 +175,50 @@ func main() {
 				defer wg.Done()
 				defer func() { <-semaphore }()
 				output := runDnspyre(GeoDB, Cfg.PreferIPv4, Cfg.NoAAAARecord, DnspyreBinPath, srv, DomainsBinPath, Cfg.Duration, Cfg.Concurrency, randomNum)
-				mu.Lock() // 加锁
+				mu.Lock() // Lock
 				RetData[srv] = output
-				mu.Unlock() // 解锁
+				mu.Unlock() // Unlock
 			}(server)
 		}
 
 		wg.Wait()
 	}
 
-	log.Info("测试完成")
-	// log.Info("测试结果: ", RetData)
+	log.Info("Testing complete")
+	// log.Info("Test results: ", RetData)
 
-	// 将测试结果转换为 JSON 字符串
+	// Convert test results to JSON string
 	retDataString, err := RetData.String()
 	if err != nil {
 		log.WithFields(log.Fields{
-			"错误": err,
-		}).Fatal("\x1b[31m无法将测试结果转换为 JSON 字符串\x1b[0m")
+			"error": err,
+		}).Fatal("\x1b[31mCannot convert test results to JSON string\x1b[0m")
 	}
 
 	if Cfg.OldIsToHTML {
 		OutputHTML(OutputPath, retDataString)
 	}
 
-	// 输出 JSON 文件
+	// Output JSON file
 	_, err = OutputFile.WriteString(retDataString)
 	if err != nil {
 		log.WithFields(log.Fields{
-			"错误":   err,
-			"输出文件": OutputPath,
-		}).Fatal("\x1b[31m无法写出结果到输出文件\x1b[0m")
+			"error":       err,
+			"output_file": OutputPath,
+		}).Fatal("\x1b[31mCannot write results to output file\x1b[0m")
 	}
 	log.WithFields(log.Fields{
-		"输出文件": OutputPath,
-	}).Info("\x1b[32m测试结果已输出到文件\x1b[0m")
+		"output_file": OutputPath,
+	}).Info("\x1b[32mTest results have been written to file\x1b[0m")
 
-	// 是否打开网页分析数据
-	log.Info("是否使用默认浏览器打开可视化数据分析网站[Y/n]")
+	// Ask whether to open data analysis website
+	log.Info("Would you like to open the data analysis dashboard in your default browser? [Y/n]")
 	var input string
 	fmt.Scanln(&input)
 	if input == "Y" || input == "y" || input == "" {
 		err := open.Run("https://bench.dash.2020818.xyz")
 		if err != nil {
-			log.WithError(err).Error("无法打开可视化数据分析网站")
+			log.WithError(err).Error("Cannot open data analysis website")
 		}
 	}
 }
@@ -228,8 +228,8 @@ func OutputHTML(path string, resultString string) {
 	htmlFile, err := os.Create(htmlFilePath)
 	if err != nil {
 		log.WithFields(log.Fields{
-			"错误": err,
-		}).Fatal("\x1b[31m无法创建 HTML 文件\x1b[0m")
+			"error": err,
+		}).Fatal("\x1b[31mCannot create HTML file\x1b[0m")
 	}
 	defer htmlFile.Close()
 	htmlTemplateData, _ := GetTemplateHTML()
@@ -238,21 +238,21 @@ func OutputHTML(path string, resultString string) {
 	_, err = htmlFile.WriteString(htmlTemplate)
 	if err != nil {
 		log.WithFields(log.Fields{
-			"错误":   err,
-			"输出文件": path,
-		}).Fatal("\x1b[31m无法写入输出文件\x1b[0m")
+			"error":       err,
+			"output_file": path,
+		}).Fatal("\x1b[31mCannot write to output file\x1b[0m")
 	}
 	log.WithFields(log.Fields{
-		"输出文件": path,
-	}).Info("\x1b[32m测试结果已输出到文件\x1b[0m")
+		"output_file": path,
+	}).Info("\x1b[32mTest results have been written to file\x1b[0m")
 
-	log.Info("是否使用默认浏览器打开 HTML 输出的文件[Y/n]")
+	log.Info("Would you like to open the HTML output file in your default browser? [Y/n]")
 	var input string
 	fmt.Scanln(&input)
 	if input == "Y" || input == "y" || input == "" {
 		err := open.Run(htmlFilePath)
 		if err != nil {
-			log.WithError(err).Error("无法打开输出文件")
+			log.WithError(err).Error("Cannot open output file")
 		}
 	}
 }

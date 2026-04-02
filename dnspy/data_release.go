@@ -8,14 +8,16 @@ import (
 	"github.com/oschwald/geoip2-golang"
 )
 
-//go:embed res/Country.mmdb
+//go:embed res/GeoLite2-City.mmdb
 var GeoData []byte
 
-// GetGeoData 函数返回一个可用于IP地理位置查询的GeoIP2数据库读取器
-// 这个函数使用嵌入的GeoData字节切片创建一个geoip2.Reader实例
-// 返回值:
-//   - *geoip2.Reader: 成功时返回GeoIP2数据库的读取器
-//   - error: 如果创建读取器失败，返回相应的错误
+// GetGeoData returns a GeoIP2 database reader for IP geolocation queries.
+// This function uses the embedded GeoData byte slice to create a geoip2.Reader instance.
+// The City-level database provides country and subdivision (state/region) information,
+// offering better coverage for countries like Mexico and the United States.
+// Returns:
+//   - *geoip2.Reader: A GeoIP2 database reader on success
+//   - error: An error if creating the reader fails
 func GetGeoData() (*geoip2.Reader, error) {
 	return geoip2.FromBytes(GeoData)
 }
@@ -23,11 +25,11 @@ func GetGeoData() (*geoip2.Reader, error) {
 //go:embed res/providers.txt
 var SampleServersData []byte
 
-// GetSampleServersData 函数返回嵌入的DNS服务器列表数据
-// 这个函数直接返回SampleServersData字节切片，无需从文件系统读取
-// 返回值:
-//   - []byte: 返回包含DNS服务器列表的字节切片
-//   - error: 始终返回nil，因为数据已经嵌入，不会发生读取错误
+// GetSampleServersData returns the embedded DNS server list data.
+// This function directly returns the SampleServersData byte slice without reading from the filesystem.
+// Returns:
+//   - []byte: A byte slice containing the DNS server list
+//   - error: Always returns nil since data is embedded
 func GetSampleServersData() ([]byte, error) {
 	return SampleServersData, nil
 }
@@ -35,11 +37,11 @@ func GetSampleServersData() ([]byte, error) {
 //go:embed res/domains.txt
 var DomainsData []byte
 
-// GetDomainsData 函数返回嵌入的域名数据
-// 这个函数直接返回DomainsData字节切片，无需从文件系统读取
-// 返回值:
-//   - []byte: 返回包含域名数据的字节切片
-//   - error: 始终返回nil，因为数据已经嵌入，不会发生读取错误
+// GetDomainsData returns the embedded domain data.
+// This function directly returns the DomainsData byte slice without reading from the filesystem.
+// Returns:
+//   - []byte: A byte slice containing the domain data
+//   - error: Always returns nil since data is embedded
 func GetDomainsData() ([]byte, error) {
 	return DomainsData, nil
 }
@@ -47,11 +49,11 @@ func GetDomainsData() ([]byte, error) {
 //go:embed res/template.html
 var TemplateHTMLData []byte
 
-// GetTemplateHTML 函数返回嵌入的HTML模板数据
-// 这个函数直接返回TemplateHTML字节切片，无需从文件系统读取
-// 返回值:
-//   - []byte: 返回包含HTML模板数据的字节切片
-//   - error: 始终返回nil，因为数据已经嵌入，不会发生读取错误
+// GetTemplateHTML returns the embedded HTML template data.
+// This function directly returns the TemplateHTML byte slice without reading from the filesystem.
+// Returns:
+//   - []byte: A byte slice containing the HTML template data
+//   - error: Always returns nil since data is embedded
 func GetTemplateHTML() ([]byte, error) {
 	return TemplateHTMLData, nil
 }

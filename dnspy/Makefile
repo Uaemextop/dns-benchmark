@@ -1,9 +1,9 @@
-# 默认目标
+# Default target
 all: run
 
-# 构建目标
+# Build target
 build: 
-	@echo "正在构建..."
+	@echo "Building..."
 	go mod tidy
 	GOOS=darwin GOARCH=amd64 go build -ldflags "-s -w" -tags release -o dnspy-darwin-amd64 .
 	GOOS=darwin GOARCH=arm64 go build -ldflags "-s -w" -tags release -o dnspy-darwin-arm64 .
@@ -12,25 +12,25 @@ build:
 	GOOS=windows GOARCH=amd64 go build -ldflags "-s -w" -tags release -o dnspy-windows-amd64.exe .
 	GOOS=windows GOARCH=arm64 go build -ldflags "-s -w" -tags release -o dnspy-windows-arm64.exe .
 
-# 运行目标
+# Run target
 run:
-	@echo "正在运行..."
+	@echo "Running..."
 	go run .
 
-# 更新地理数据
+# Update geographic data (City-level for better US/Mexico coverage)
 update-geodata:
-	@echo "正在更新地理数据..."
-	curl https://cdn.jsdelivr.net/gh/Loyalsoldier/geoip@release/Country.mmdb -o ./res/Country.mmdb
+	@echo "Updating geographic data (City-level)..."
+	curl -L https://github.com/P3TERX/GeoLite.mmdb/raw/download/GeoLite2-City.mmdb -o ./res/GeoLite2-City.mmdb
 
-# 更新域名数据
+# Update domain data
 update-domains:
-	@echo "正在更新域名数据..."
+	@echo "Updating domain data..."
 	curl https://cdn.jsdelivr.net/gh/Tantalor93/dnspyre@master/data/10000-domains -o ./res/domains.txt
 
-# 更新 dnspyre 可执行文件
+# Update dnspyre executable
 configuration:
-	@echo "正在更新 dnspyre 可执行文件..."
-	@echo "请勿修改使用的 dnspyre 版本号,否则会导致 dnspy 无法正常运行"
+	@echo "Updating dnspyre executable..."
+	@echo "Do not modify the dnspyre version number, otherwise dnspy will not work properly"
 	go get github.com/tantalor93/dnspyre/v3@latest
 	GOOS=darwin GOARCH=amd64 go build -ldflags "-s -w" -o ./res/dnspyre-darwin-amd64 github.com/tantalor93/dnspyre/v3
 	GOOS=darwin GOARCH=arm64 go build -ldflags "-s -w" -o ./res/dnspyre-darwin-arm64 github.com/tantalor93/dnspyre/v3

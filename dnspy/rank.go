@@ -12,7 +12,7 @@ type scoreResult struct {
 	Qps         float64 `json:"qps"`
 }
 
-// 权重常量：用于不同评分项的权重
+// Weight constants for different scoring categories
 const (
 	SuccessRateScoreWeight = 35
 	ErrorRateScoreWeight   = 10
@@ -20,71 +20,71 @@ const (
 	QpsScoreWeight         = 5
 )
 
-// 分数计算的常量阈值
+// Threshold constants for score calculation
 const (
-	LatencyRangeMax      = 1000 // 超过 *ms 以上的平均延迟得 0 分
-	LatencyRangeMin      = 0.1  // 小于 *ms 的平均延迟得 0 分
-	LatencyFullMarkPoint = 50   // 小于 *ms 的平均延迟满分
-	MaxQps               = 100  // * QPS 为满分
+	LatencyRangeMax      = 1000 // Average latency above *ms scores 0
+	LatencyRangeMin      = 0.1  // Average latency below *ms scores 0
+	LatencyFullMarkPoint = 50   // Average latency below *ms gets full marks
+	MaxQps               = 100  // * QPS for full marks
 )
 
-// 定义错误值
+// Error value definitions
 var ErrNoRequests = scoreResult{}
 
-// ScoreBenchmarkResult 计算 DNS 服务器的评分
+// ScoreBenchmarkResult calculates the score for a DNS server
 func ScoreBenchmarkResult(r jsonResult) scoreResult {
-	// 检查成功响应数是否为 0
+	// Check if successful responses count is 0
 	if r.TotalSuccessResponses == 0 {
 		return ErrNoRequests
 	}
 
-	// 计算成功率：成功响应次数占总请求次数的比例
+	// Calculate success rate: ratio of successful responses to total requests
 	successRate := float64(r.TotalSuccessResponses) / float64(r.TotalRequests)
-	// 计算成功率评分：线性映射
+	// Success rate score: linear mapping
 	successRateScore := successRate * 100
 
-	// 计算错误率：错误响应和 IO 错误占总请求次数的比例
+	// Calculate error rate: ratio of error responses and IO errors to total requests
 	errorRate := float64(r.TotalErrorResponses+r.TotalIOErrors) / float64(r.TotalRequests)
-	// 错误率评分计算：线性映射
+	// Error rate score calculation: linear mapping
 	errorRateScore := 100 * (1 - errorRate)
-	// 确保最终分数在0-100之间
+	// Ensure final score is between 0-100
 	errorRateScore = math.Max(0, math.Min(100, errorRateScore))
 
-	// 计算延迟评分：综合平均延迟和标准差，考虑延迟的稳定性
+	// Calculate latency score: combining average latency and standard deviation for stability
 	var latencyScore float64
-	// 综合平均值和中位数
+	// Combine mean and median
 	meanMS := float64((r.LatencyStats.MeanMs + r.LatencyStats.P50Ms) / 2)
 
 	if meanMS < LatencyRangeMin || meanMS > LatencyRangeMax {
-		// 无效的平均延迟，得分为0
+		// Invalid average latency, score is 0
 		latencyScore = 0
 	} else {
-		// 如果平均延迟在满分阈值和 0.1ms 之间，线性计算分数
+		// If average latency is between full mark threshold and 0.1ms, calculate linearly
 		baseScore := 100 - (meanMS-LatencyFullMarkPoint)*100/(LatencyRangeMax-LatencyFullMarkPoint)
-		// 考虑标准差，引入较轻的惩罚因子，使得延迟波动大的情况得分稍低
+		// Consider standard deviation, apply a light penalty factor for high latency variance
 		stabilityFactor := 1 / (1 + 0.5*math.Pow(float64(r.LatencyStats.StdMs)/meanMS, 2))
 		latencyScore = baseScore * (0.8 + 0.2*stabilityFactor)
 	}
-	// 确保最终分数在0-100之间
+	// Ensure final score is between 0-100
 	latencyScore = math.Max(0, math.Min(100, latencyScore))
 
-	// 如果 p95 延迟也非常高，进一步降低分数（处理极端延迟的情况）
+	// If p95 latency is also very high, further reduce the score (handle extreme latency cases)
 	if r.LatencyStats.P95Ms > LatencyRangeMax {
-		latencyScore *= 0.85 // 延迟不稳定，进一步扣分
+		latencyScore *= 0.85 // Unstable latency, additional penalty
 	}
 
-	// QPS 评分：使用对数函数映射，考虑最大 QPS
+	// QPS score: logarithmic mapping, considering max QPS
 	qpsScore := 100 * math.Log(1+r.QueriesPerSecond) / math.Log(1+MaxQps)
-	// 确保分数不超过 100
+	// Ensure score does not exceed 100
 	qpsScore = math.Min(100, qpsScore)
 
-	// 综合总分：根据各项评分的权重计算总分
+	// Composite total score: weighted calculation based on each category
 	totalScore := (successRateScore*SuccessRateScoreWeight +
 		errorRateScore*ErrorRateScoreWeight +
 		latencyScore*LatencyScoreWeight +
 		qpsScore*QpsScoreWeight) / 100
 
-	// 返回评分结果
+	// Return score result
 	return scoreResult{
 		Total:       Round(totalScore, 2),
 		SuccessRate: Round(successRateScore, 2),

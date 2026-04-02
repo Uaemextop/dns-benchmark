@@ -1,171 +1,177 @@
-# dnspy - DNS 服务器的可访问性和性能测试工具
+# dnspy - DNS Server Performance Testing Tool
 
-[English](./README.en.md) | [中文](./README.md)
+[English](./README.md) | [中文](./README.en.md)
 
-## 项目简介
+## Project Overview
 
-国内 DNS 服务常遭运营商劫持，被插入各种广告，同时存在隐私泄露风险。为了保障安全可靠的上网体验，我们需要寻找值得信赖的 DNS 服务。
+DNS services in many regions are often hijacked by ISPs, injecting various advertisements and causing privacy concerns. To ensure a safe and reliable internet experience, we need to find trustworthy DNS services.
 
-现有的同类工具并不多，较为知名的 DNSJumper 仅支持 Windows 平台，且存在数据源较少、评测维度单一等问题。
+There are not many similar tools available. The well-known DNSJumper only supports Windows and has limitations such as limited data sources and single evaluation dimensions.
 
-因此开发了这款工具，用于测试本地网络环境下可用的 DNS 服务器及其性能表现。该工具使用 Golang 编写，跨平台支持 Windows、macOS、Linux。
+Therefore, we developed this tool to test available DNS servers and their performance in your local network environment. This tool is written in Golang and supports cross-platform use on Windows, macOS, and Linux.
 
-并且配套提供可视化数据分析面板，让您一目了然地了解可用的 DNS 服务器 😊
+Additionally, we provide a visual data analysis dashboard that allows you to easily understand which DNS servers are available 😊
 
-**温馨提示**：点击数据分析面板中的柱状图即可复制服务器地址。
+**Pro Tip**: Click on the bar charts in the data analysis dashboard to copy server addresses.
 
-**使用流程**：按照下文指导下载测试工具并获得测试结果的 JSON 文件，然后打开数据分析面板网站上传数据即可分析。网站不存储任何数据。
+**Usage Flow**: Follow the guide below to download the testing tool and obtain a JSON file with test results, then open the data analysis dashboard website to upload and analyze the data. The website does not store any data.
 
-## 数据分析面板预览
+## Data Analysis Dashboard Preview
 
-![数据分析面板预览](https://github.com/user-attachments/assets/c743f7ba-4d77-4d16-8515-02c0dc99ddfa)
+![Data Analysis Dashboard Preview](https://github.com/user-attachments/assets/c743f7ba-4d77-4d16-8515-02c0dc99ddfa)
 
-[数据分析面板（内含示例数据）](https://bench.dash.2020818.xyz)
+[Data Analysis Dashboard (with Sample Data)](https://bench.dash.2020818.xyz)
 
-## 使用方式
+## Usage
 
 ![dnspy](https://github.com/user-attachments/assets/a499d2fc-ffcd-4b71-a0dd-d6e5839792dd)
 
-### 1. 下载工具
+### 1. Download the Tool
 
-在本仓库的 [releases](https://github.com/xxnuo/dns-benchmark/releases) 页面中，根据您的系统架构下载对应的 `dnspy-*` 文件。
+From the [releases](https://github.com/xxnuo/dns-benchmark/releases) page of this repository, download the corresponding `dnspy-*` file according to your system architecture.
 
-例如：M 系列处理器的 macOS 用户应下载 `dnspy-darwin-arm64` 文件。
+For example: macOS users with M-series processors should download the `dnspy-darwin-arm64` file.
 
-### 2. 准备测试环境
+### 2. Prepare Testing Environment
 
-**重要提示**：必须关闭所有代理软件的 Tun 模式、虚拟网卡模式，否则会严重影响测试结果的准确性。
+**Important Notice**: You must disable all proxy software's Tun mode and virtual network card mode, otherwise it will severely affect the accuracy of test results.
 
-### 3. 运行测试
+### 3. Run the Test
 
-将下载的文件重命名为 `dnspy`（Windows 系统为 `dnspy.exe`），然后打开终端，切换到该文件所在的目录，执行以下命令：
+Rename the downloaded file to `dnspy` (`dnspy.exe` on Windows), open a terminal, navigate to the directory containing the file, and execute the following commands:
 
 ```bash
 unset http_proxy https_proxy all_proxy HTTP_PROXY HTTPS_PROXY ALL_PROXY
 ./dnspy
 ```
 
-按照提示输入即可开始测试。
+Follow the prompts to start testing.
 
-### 4. 测试说明
+### 4. Testing Instructions
 
-程序默认使用多线程模式以加快测试速度。
+The program uses multi-threading mode by default to speed up testing.
 
-> **性能要求**：默认参数（10 个线程）需要至少上下行 1 MB/s 的网络带宽和至少 4 核心处理器。
+> **Performance Requirements**: The default parameters (10 threads) require at least 1 MB/s network bandwidth (both upload and download) and at least a 4-core processor.
 >
-> 如果网络或处理器性能不足，可能导致测试结果不准确，建议通过 `-w` 参数降低线程数。
+> If your network or processor performance is insufficient, it may lead to inaccurate test results. It is recommended to reduce the number of threads using the `-w` parameter.
 
-测试完成后，结果将输出到当前目录下，文件名格式为 `dnspy_result_2024-11-07-17-32-13.json`。
+After the test is complete, the results will be output to the current directory with a filename format like `dnspy_result_2024-11-07-17-32-13.json`.
 
-### 5. 查看结果
+### 5. View Results
 
-按程序提示输入 `Y` 或 `y` 或直接按回车键，程序将自动打开数据分析面板网站。点击网站右上角的"读取分析"按钮，选择刚生成的 JSON 文件，即可查看可视化测试结果。
+Following the program prompt, enter `Y` or `y` or simply press Enter, and the program will automatically open the data analysis dashboard website. Click the "Read Analysis" button in the upper right corner of the website, select the JSON file just generated, and you can view the visualized test results.
 
-## 可用参数
+## Available Parameters
 
 ```bash
 ~> dnspy -h
 
-使用示例:
+Usage examples:
 
   dnspy
-    使用内置的世界所有域名直接启动测试
+    Start testing directly using built-in worldwide DNS servers
 
   dnspy -s 114.114.114.114
-    测试单个服务器
+    Test a single server
 
   dnspy dnspy_benchmark_2024-10-22-08-18.json
-    对测试结果进行可视化分析
+    Visualize and analyze test results
 
-参数说明:
-  -c, --concurrency int   每个测试的并发数
-                          (默认 10)
+Parameters:
+  -c, --concurrency int   Concurrency count for each test
+                          (default 10)
 
-  -d, --domains string    要批量测试的域名数据存储的文件路径
-                          必须是相对当前程序工作路径的文件路径
-                          文件内部格式为每行一条域名
-                          不修改则使用内置的 10000 个热门域名
-                          (默认 "@sampleDomains@")
+  -d, --domains string    File path for domain data to bulk test
+                          Must be relative to the current working directory
+                          One domain per line
+                          Uses built-in 10000 popular domains if not specified
+                          (default "@sampleDomains@")
 
-  -t, --duration int      每个测试的持续时间，单位：秒
-                          (默认 10)
+  -t, --duration int      Duration of each test in seconds
+                          (default 10)
 
-  -f, --file string       要批量测试的服务器数据存储的文件路径
-                          必须是相对当前程序工作路径的文件路径
-                          文件内部格式为每行一条服务器地址
+  -f, --file string       File path for server data to bulk test
+                          Must be relative to the current working directory
+                          One server address per line
 
-  -g, --geo string        独立功能：使用 GeoIP 数据库进行 IP 或域名归属地查询
+  -g, --geo string        Standalone feature: Query IP or domain geolocation using GeoIP database
 
-      --json              以 JSON 格式输出日志
+      --json              Output logs in JSON format
 
-  -l, --level string      日志级别
-                          可选：debug、info、warn、error、fatal、panic
-                          (默认 "info")
+  -l, --level string      Log level
+                          Options: debug, info, warn, error, fatal, panic
+                          (default "info")
 
-      --no-aaaa           每个测试不解析 AAAA 记录（不测试 IPv6）
+      --no-aaaa           Do not resolve AAAA records in each test (skip IPv6 testing)
 
-      --old-html          已弃用，不建议使用
-                          建议改用新方式：程序先输出数据 JSON 文件，按提示查看可视化分析
-                          下次需要查看时，直接用程序打开 JSON 文件
-                          本参数使用旧版方式输出单个 HTML 文件到数据 JSON 同目录
-                          可双击打开查看
+      --old-html          Deprecated, not recommended
+                          Recommended: Program outputs a JSON file, follow prompts to view visual analysis
+                          To view again later, open the JSON file directly with the program
+                          This parameter uses the legacy method to output a single HTML file alongside the JSON data
+                          Can be opened by double-clicking
 
-  -o, --output string     输出结果的文件路径
-                          必须是相对当前程序工作路径的文件路径
-                          不指定则输出到当前工作路径下的 dnspy_result_<当前时间>.json
+  -o, --output string     Output result file path
+                          Must be relative to the current working directory
+                          If not specified, outputs to dnspy_result_<current_time>.json in the current directory
 
-      --prefer-ipv4       在 DNS 服务器的域名转换为 IP 地址过程中优先使用 IPv4 地址
-                          (默认 true)
+      --prefer-ipv4       Prefer IPv4 addresses when resolving DNS server hostnames to IP addresses
+                          (default true)
 
-  -s, --server strings    手动指定要测试的服务器，支持多个
+  -s, --server strings    Manually specify server(s) to test (supports multiple)
 
-  -w, --worker int        同一时间测试多少个 DNS 服务器
-                          (默认 20)
+  -w, --worker int        Number of DNS servers to test simultaneously
+                          (default 20)
 ```
 
-## 编译
+## Compilation
 
-### 编译环境要求
+### Compilation Environment Requirements
 
-- 你的电脑上需要有 `Go` 环境、`curl` 命令
-- 最好有 `make` 命令，否则可能需要手动执行 `Makefile` 中的内容
-- 能够访问 GitHub 下载资源文件
-- 如果在 Windows 下出现以下问题，请改用 `Git Bash` 执行命令
+- You need `Go` environment and `curl` command on your computer
+- Preferably have `make` command, otherwise you may need to manually execute contents in `Makefile`
+- Ability to access GitHub to download resource files
+- If you encounter the following issue on Windows, please use `Git Bash` to execute commands instead
 
 ```
 'GOOS' is not recognized as an internal or external command,
 operable program or batch file.
 ```
 
-### 编译步骤
+### Compilation Steps
 
-#### 1. 克隆本仓库
+#### 1. Clone This Repository
 
 ```bash
 git clone https://github.com/xxnuo/dns-benchmark.git
 cd dns-benchmark/dnspy
 ```
 
-#### 2. 更新数据文件（可选）
+#### 2. Update Data Files (Required for first build)
+
+Download the GeoIP database and domain data:
 
 ```bash
 make update
 ```
 
-#### 3. 配置依赖
+This downloads:
+- **GeoLite2-City.mmdb** - City-level GeoIP database for accurate geolocation (supports subdivision/state level for US, Mexico, etc.)
+- **domains.txt** - 10,000 popular domains for DNS performance testing
+
+#### 3. Configure Dependencies
 
 ```bash
 make configuration
 ```
 
-#### 4. 进行编译
+#### 4. Build
 
 ```bash
 make build
 ```
 
-编译完成后，生成的可执行文件将位于当前目录下。
+After compilation is complete, the generated executable file will be located in the current directory.
 
-## 许可证
+## License
 
-本项目采用开源许可证，欢迎贡献代码和提出建议。
+This project is open source. Contributions and suggestions are welcome.

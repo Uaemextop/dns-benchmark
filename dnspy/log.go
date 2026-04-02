@@ -5,18 +5,18 @@ import (
 )
 
 func InitLog(isJSON bool, logLevel string) {
-	// 设置日志格式
+	// Set log format
 	if isJSON {
 		log.SetFormatter(&log.JSONFormatter{})
 	} else {
 		log.SetFormatter(&log.TextFormatter{
 			FullTimestamp:   true,
-			TimestampFormat: "2006-01-02 15:04:05", // 简短时间格式
-			DisableQuote:    true,                  // 禁用字段引号
+			TimestampFormat: "2006-01-02 15:04:05", // Short time format
+			DisableQuote:    true,                  // Disable field quoting
 		})
 	}
 
-	// 设置日志级别
+	// Set log level
 	var _logLevel log.Level
 	switch logLevel {
 	case "debug":

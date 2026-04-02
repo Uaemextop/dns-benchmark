@@ -9,20 +9,20 @@ import (
 	"strings"
 )
 
-// FormatListFile 格式化列表文件
+// FormatListFile formats a list file
 func FormatListFile(path string) ([]string, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("读取文件失败: %w", err)
+		return nil, fmt.Errorf("failed to read file: %w", err)
 	}
 	return FormatListData(&data)
 }
 
-// FormatListData 格式化列表字节
+// FormatListData formats list data bytes
 func FormatListData(data *[]byte) ([]string, error) {
-	lines := make([]string, 0, 100) // 预分配容量，减少内存分配
+	lines := make([]string, 0, 100) // Pre-allocate capacity to reduce memory allocation
 	scanner := bufio.NewScanner(bytes.NewReader(*data))
-	scanner.Buffer(make([]byte, 4096), 1048576) // 设置更大的缓冲区
+	scanner.Buffer(make([]byte, 4096), 1048576) // Set larger buffer
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -32,13 +32,13 @@ func FormatListData(data *[]byte) ([]string, error) {
 	}
 
 	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("扫描数据失败: %w", err)
+		return nil, fmt.Errorf("failed to scan data: %w", err)
 	}
 
 	return lines, nil
 }
 
-// Round 四舍五入
+// Round rounds a float to the specified number of decimal places
 func Round(x float64, precision int) float64 {
 	scale := math.Pow10(precision)
 	return math.Round(x*scale) / scale

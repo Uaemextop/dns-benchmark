@@ -17,7 +17,7 @@ type latencyStats struct {
 }
 
 type jsonResult struct {
-	// 用到了的 dnspyre 输出 JSON 格式的字段结构体定义
+	// dnspyre JSON output field definitions used by this tool
 	TotalRequests            int64            `json:"totalRequests"`
 	TotalSuccessResponses    int64            `json:"totalSuccessResponses"`
 	TotalNegativeResponses   int64            `json:"totalNegativeResponses"`
@@ -31,13 +31,13 @@ type jsonResult struct {
 	BenchmarkDurationSeconds float64          `json:"benchmarkDurationSeconds"`
 	LatencyStats             latencyStats     `json:"latencyStats"`
 
-	// add:地理信息
+	// Additional fields: geographic information
 	IPAddress string      `json:"ip"`
 	Geocode   string      `json:"geocode"`
 	Score     scoreResult `json:"score"`
 }
 
-// 自定义 BenchmarkResult 类型，用于 JSON 序列化
+// BenchmarkResult is a custom type for JSON serialization
 type BenchmarkResult map[string]jsonResult
 
 func (b *BenchmarkResult) String() (string, error) {

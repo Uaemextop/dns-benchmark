@@ -9,50 +9,50 @@ import (
 	flag "github.com/spf13/pflag"
 )
 
-// Config 结构体用于存储所有的配置选项
+// Config stores all configuration options
 type Config struct {
-	LogJSON         bool     // 日志格式
-	LogLevel        string   // 日志级别
-	PreferIPv4      bool     // 在DNS服务器的域名转换为IP地址过程中优先使用IPv4地址
-	ServersDataPath string   // 要测试的服务器数据路径,必须是相对当前程序工作路径的文件路径,文件内部格式是一行一条
-	DomainsDataPath string   // 要批量测试的域名数据存储的文件路径,必须是相对当前程序工作路径的文件路径,文件内部格式是一行一条
-	Duration        int      // 每个测试持续时间,单位秒
-	Concurrency     int      // 每个测试并发数
-	NoAAAARecord    bool     // 每个测试不解析 AAAA 记录
-	Servers         []string // 手动指定要测试的服务器,支持多个
-	Workers         int      // 同一时间测试多少个 DNS 服务器
-	OutputPath      string   // 输出结果的文件路径,必须是相对当前程序工作路径的文件路径
-	OldIsToHTML     bool     // 是否使用旧版方式输出数据到单个 HTML 文件可双击打开查看
-	// 功能参数
-	InputResultJsonPath string // 输入结果 json 文件路径,必须是相对当前程序工作路径的文件路径
-	FnGeo               string // 使用 GeoIP 数据库进行 IP 归属地查询
+	LogJSON         bool     // Log format (JSON)
+	LogLevel        string   // Log level
+	PreferIPv4      bool     // Prefer IPv4 addresses when resolving DNS server hostnames to IP addresses
+	ServersDataPath string   // Path to server data file (relative to working directory, one entry per line)
+	DomainsDataPath string   // Path to domain data file for bulk testing (relative to working directory, one entry per line)
+	Duration        int      // Duration of each test in seconds
+	Concurrency     int      // Concurrency count for each test
+	NoAAAARecord    bool     // Do not resolve AAAA records in each test
+	Servers         []string // Manually specified servers to test (supports multiple)
+	Workers         int      // Number of DNS servers to test simultaneously
+	OutputPath      string   // Output result file path (relative to working directory)
+	OldIsToHTML     bool     // Use legacy method to output data to a single HTML file
+	// Feature flags
+	InputResultJsonPath string // Input result JSON file path (relative to working directory)
+	FnGeo               string // Use GeoIP database for IP geolocation queries
 }
 
 func InitFlags() (Config, error) {
 	cfg := Config{}
-	flag.BoolVar(&cfg.LogJSON, "json", false, "\x1b[32m以json格式输出日志\x1b[0m\n")
-	flag.StringVarP(&cfg.LogLevel, "level", "l", "info", "\x1b[32m日志级别\n可选 debug,info,warn,error,fatal,panic\x1b[0m\n")
-	flag.BoolVar(&cfg.PreferIPv4, "prefer-ipv4", true, "\x1b[32m在DNS服务器的域名转换为IP地址过程中优先使用IPv4地址\x1b[0m\n")
-	flag.StringVarP(&cfg.ServersDataPath, "file", "f", "", "\x1b[32m要批量测试的服务器数据存储的文件路径\n必须是相对当前程序工作路径的文件路径\n文件内部格式是一行一条\x1b[0m\n")
-	flag.StringSliceVarP(&cfg.Servers, "server", "s", []string{}, "\x1b[32m手动指定要测试的服务器,支持多个\x1b[0m\n")
-	flag.StringVarP(&cfg.DomainsDataPath, "domains", "d", "@sampleDomains@", "\x1b[32m要批量测试的域名数据存储的文件路径\n必须是相对当前程序工作路径的文件路径\n文件内部格式是一行一条\n不修改则使用内置的10000个热门域名\x1b[0m\n")
-	flag.IntVarP(&cfg.Duration, "duration", "t", 10, "\x1b[32m每个测试持续时间,单位秒\x1b[0m\n")
-	flag.IntVarP(&cfg.Concurrency, "concurrency", "c", 10, "\x1b[32m每个测试并发数\x1b[0m\n")
-	flag.IntVarP(&cfg.Workers, "worker", "w", 20, "\x1b[32m同一时间测试多少个 DNS 服务器\x1b[0m\n")
-	flag.BoolVar(&cfg.NoAAAARecord, "no-aaaa", false, "\x1b[32m每个测试不解析 AAAA 记录\x1b[0m\n")
-	flag.StringVarP(&cfg.OutputPath, "output", "o", "", "\x1b[32m输出结果的文件路径\n必须是相对当前程序工作路径的文件路径\n不指定则输出到当前工作路径下的 dnspy_result_<当前时间>.json\x1b[0m\n")
-	flag.BoolVar(&cfg.OldIsToHTML, "old-html", false, "\x1b[32m已弃用不建议使用\n建议改用如 <示例1> 程序先直接解析输出数据 json 文件并按提示直接查看可视化数据分析\n如下次需要查看可视化数据分析可如 <示例3> 用程序打开 json 文件\n本参数使用旧版方式输出单个 HTML 文件到数据 json 同目录\n可双击打开查看\x1b[0m\n")
-	flag.StringVarP(&cfg.FnGeo, "geo", "g", "", "\x1b[32m独立功能: 使用 GeoIP 数据库进行 IP 或域名归属地查询\x1b[0m\n")
-	// 使用说明
+	flag.BoolVar(&cfg.LogJSON, "json", false, "\x1b[32mOutput logs in JSON format\x1b[0m\n")
+	flag.StringVarP(&cfg.LogLevel, "level", "l", "info", "\x1b[32mLog level\nOptions: debug, info, warn, error, fatal, panic\x1b[0m\n")
+	flag.BoolVar(&cfg.PreferIPv4, "prefer-ipv4", true, "\x1b[32mPrefer IPv4 addresses when resolving DNS server hostnames to IP addresses\x1b[0m\n")
+	flag.StringVarP(&cfg.ServersDataPath, "file", "f", "", "\x1b[32mFile path for server data to bulk test\nMust be relative to the current working directory\nOne server address per line\x1b[0m\n")
+	flag.StringSliceVarP(&cfg.Servers, "server", "s", []string{}, "\x1b[32mManually specify servers to test (supports multiple)\x1b[0m\n")
+	flag.StringVarP(&cfg.DomainsDataPath, "domains", "d", "@sampleDomains@", "\x1b[32mFile path for domain data to bulk test\nMust be relative to the current working directory\nOne domain per line\nUses built-in 10000 popular domains if not specified\x1b[0m\n")
+	flag.IntVarP(&cfg.Duration, "duration", "t", 10, "\x1b[32mDuration of each test in seconds\x1b[0m\n")
+	flag.IntVarP(&cfg.Concurrency, "concurrency", "c", 10, "\x1b[32mConcurrency count for each test\x1b[0m\n")
+	flag.IntVarP(&cfg.Workers, "worker", "w", 20, "\x1b[32mNumber of DNS servers to test simultaneously\x1b[0m\n")
+	flag.BoolVar(&cfg.NoAAAARecord, "no-aaaa", false, "\x1b[32mDo not resolve AAAA records in each test (skip IPv6 testing)\x1b[0m\n")
+	flag.StringVarP(&cfg.OutputPath, "output", "o", "", "\x1b[32mOutput result file path\nMust be relative to the current working directory\nIf not specified, outputs to dnspy_result_<current_time>.json in the current directory\x1b[0m\n")
+	flag.BoolVar(&cfg.OldIsToHTML, "old-html", false, "\x1b[32mDeprecated, not recommended\nRecommended: Program outputs a JSON file, follow prompts to view visual analysis\nTo view again later, open the JSON file directly with the program\nThis parameter uses the legacy method to output a single HTML file alongside the JSON data\nCan be opened by double-clicking\x1b[0m\n")
+	flag.StringVarP(&cfg.FnGeo, "geo", "g", "", "\x1b[32mStandalone feature: Query IP or domain geolocation using GeoIP database\x1b[0m\n")
+	// Usage instructions
 	flag.Usage = func() {
-		fmt.Print("使用示例:\n\n" +
+		fmt.Print("Usage examples:\n\n" +
 			"\x1b[33mdnspy\x1b[0m\n\n" +
-			"\x1b[32m使用内置的世界所有域名直接启动测试\x1b[0m\n\n" +
+			"\x1b[32mStart testing directly using built-in worldwide DNS servers\x1b[0m\n\n" +
 			"\x1b[33mdnspy -s 114.114.114.114\x1b[0m\n\n" +
-			"\x1b[32m测试单个服务器\x1b[0m\n\n" +
+			"\x1b[32mTest a single server\x1b[0m\n\n" +
 			"\x1b[33mdnspy dnspy_benchmark_2024-10-22-08-18.json\x1b[0m\n\n" +
-			"\x1b[32m对测试结果进行可视化分析\x1b[0m\n\n" +
-			"参数说明:\n")
+			"\x1b[32mVisualize and analyze test results\x1b[0m\n\n" +
+			"Parameters:\n")
 		flag.PrintDefaults()
 	}
 
@@ -66,21 +66,21 @@ func InitFlags() (Config, error) {
 		geoDB, err := InitGeoDB()
 		if err != nil {
 			log.WithFields(log.Fields{
-				"错误": err,
-			}).Error("读取 GeoIP 数据库失败")
+				"error": err,
+			}).Error("Failed to read GeoIP database")
 			return cfg, err
 		}
 		ip, country, err := CheckGeo(geoDB, cfg.FnGeo, cfg.PreferIPv4)
 		if err != nil {
 			log.WithFields(log.Fields{
-				"错误": err,
-			}).Error("查询失败")
+				"error": err,
+			}).Error("Query failed")
 			return cfg, err
 		}
 		log.WithFields(log.Fields{
 			"IP":   ip,
 			"Code": country,
-		}).Infof("\x1b[32m查询结果:\x1b[0m")
+		}).Infof("\x1b[32mQuery result:\x1b[0m")
 	}
 
 	for _, v := range otherFlags {
@@ -90,9 +90,9 @@ func InitFlags() (Config, error) {
 				jsonData, err := os.ReadFile(cfg.InputResultJsonPath)
 				if err != nil {
 					log.WithFields(log.Fields{
-						"错误":   err,
-						"输入文件": cfg.InputResultJsonPath,
-					}).Error("读取输入的 json 文件失败")
+						"error":      err,
+						"input_file": cfg.InputResultJsonPath,
+					}).Error("Failed to read input JSON file")
 					return cfg, err
 				}
 				OutputHTML(cfg.InputResultJsonPath, string(jsonData))
@@ -106,15 +106,15 @@ func InitFlags() (Config, error) {
 	}
 
 	if cfg.ServersDataPath == "" && len(cfg.Servers) == 0 {
-		log.Error("你没有指定要测试的服务器数据存储的文件路径或手动输入要测试的服务器")
-		log.Info("是否使用内置的世界 DNS 服务器数据开始测试(服务器很多,需要测试一段时间)? [y/N]")
+		log.Error("You have not specified a server data file path or manually entered servers to test")
+		log.Info("Would you like to use the built-in worldwide DNS server data to start testing (many servers, testing will take some time)? [y/N]")
 		var input string
 		fmt.Scanln(&input)
 		if input == "Y" || input == "y" {
 			cfg.ServersDataPath = "@sampleServers@"
 		} else {
-			// log.Error("没有有效数据,程序退出")
-			return cfg, fmt.Errorf("没有有效数据")
+			// log.Error("No valid data, program exit")
+			return cfg, fmt.Errorf("no valid data")
 		}
 	}
 
