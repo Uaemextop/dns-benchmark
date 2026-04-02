@@ -1,4 +1,6 @@
 import { useEffect, useRef, useCallback } from "react";
+import { getSSEUrl } from "../../services/api";
+import { SSE_RECONNECT_DELAY } from "../../constants";
 
 /**
  * Hook that manages the SSE connection for benchmark progress.
@@ -16,7 +18,7 @@ export function useSSE({ onStatus, onProgress, onComplete, onStopped, onError })
   const connect = useCallback(() => {
     if (esRef.current) esRef.current.close();
 
-    const es = new EventSource("/api/benchmark/status");
+    const es = new EventSource(getSSEUrl());
     esRef.current = es;
 
     es.onmessage = (event) => {
@@ -47,7 +49,7 @@ export function useSSE({ onStatus, onProgress, onComplete, onStopped, onError })
     es.onerror = () => {
       setTimeout(() => {
         if (esRef.current === es) connect();
-      }, 3000);
+      }, SSE_RECONNECT_DELAY);
     };
   }, [onStatus, onProgress, onComplete, onStopped, onError]);
 

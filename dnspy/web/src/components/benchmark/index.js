@@ -6,4 +6,5 @@ export { default as RankingTab } from "./RankingTab";
 export { default as LiveFeedTab } from "./LiveFeedTab";
 export { default as AllResultsTab } from "./AllResultsTab";
 export { default as ServerDetailModal } from "./ServerDetailModal";
+export { default as HistoryPanel } from "./HistoryPanel";
 export { useBenchmark } from "./useBenchmark";

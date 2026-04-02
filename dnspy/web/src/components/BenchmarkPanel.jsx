@@ -45,6 +45,7 @@ import {
   LiveFeedTab,
   AllResultsTab,
   ServerDetailModal,
+  HistoryPanel,
 } from "./benchmark";
 import { computeStats, isAlive } from "./benchmark/utils";
 
@@ -86,6 +87,18 @@ export default function BenchmarkPanel({ onSwitchToAnalyze }) {
     elapsedTime,
     handleExport,
   } = benchmark;
+
+  // Load history results into the analyze tab
+  const handleLoadHistory = (results) => {
+    if (results && Object.keys(results).length > 0) {
+      // Set partial results for display in benchmark view
+      Object.entries(results).forEach(([server, result]) => {
+        benchmark.partialResults[server] = result;
+      });
+      // Force re-render by toggling a state
+      window.location.reload();
+    }
+  };
 
   // Derived data
   const { aliveEntries, deadCount, avgLatency, avgSuccessRate, avgQPS } =
@@ -338,6 +351,11 @@ export default function BenchmarkPanel({ onSwitchToAnalyze }) {
           </CardBody>
         </Card>
       </div>
+
+      {/* History Panel */}
+      {!isRunning && (
+        <HistoryPanel onLoadHistory={handleLoadHistory} />
+      )}
 
       {/* Server Detail Modal */}
       <ServerDetailModal

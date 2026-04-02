@@ -1,10 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { LOCAL_STORAGE_KEY } from "../constants";
 
 const FileContext = createContext();
-
-const LOCAL_STORAGE_KEY = "dnsAnalyzerData";
 
 export function FileProvider({ children }) {
   const { t } = useTranslation();
@@ -29,7 +28,7 @@ export function FileProvider({ children }) {
       }
       return data;
     } catch (error) {
-      console.error("解析保存的JSON时出错:", error);
+      console.error("Error parsing saved JSON data:", error);
       return null;
     }
   });
@@ -65,7 +64,7 @@ export function FileProvider({ children }) {
         setJsonData(data);
         showToast('success', 'tip.data_loaded', 'tip.data_loaded_desc');
       } catch (error) {
-        console.error("解析JSON时出错:", error);
+        console.error("Error parsing JSON file:", error);
         showToast('error', 'tip.data_load_failed', 'tip.data_load_failed_desc');
       }
     };
@@ -85,7 +84,7 @@ export function FileProvider({ children }) {
 export function useFile() {
   const context = useContext(FileContext);
   if (context === undefined) {
-    throw new Error("useFile必须在FileProvider中使用");
+    throw new Error("useFile must be used within a FileProvider");
   }
   return context;
 }
