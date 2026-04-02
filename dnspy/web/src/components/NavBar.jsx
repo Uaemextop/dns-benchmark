@@ -1,4 +1,4 @@
-import { Navbar, NavbarBrand, NavbarContent, NavbarItem, Button, Link, Tooltip } from "@nextui-org/react";
+import { Navbar, NavbarBrand, NavbarContent, NavbarItem, Button, Link, Tooltip, Tabs, Tab } from "@nextui-org/react";
 import { FaGithub as GithubIcon } from "react-icons/fa6";
 import { MdDns as DnsIcon } from "react-icons/md";
 import { useTranslation } from "react-i18next";
@@ -7,7 +7,7 @@ import ThemeSwitcher from "./ThemeSwitcher";
 import LangSwitcher from "./LangSwitcher";
 import Upload from "./Upload";
 
-export default function NavBar() {
+export default function NavBar({ isGuiMode, activeTab, onTabChange }) {
   const { t } = useTranslation();
   return (
     <div id="navbar">
@@ -18,6 +18,22 @@ export default function NavBar() {
             <p className="font-bold text-inherit">{t("title")}</p>
           </Link>
         </NavbarBrand>
+
+        {isGuiMode && (
+          <NavbarContent justify="center">
+            <NavbarItem>
+              <Tabs
+                selectedKey={activeTab}
+                onSelectionChange={(key) => onTabChange(String(key))}
+                variant="underlined"
+                color="primary"
+              >
+                <Tab key="benchmark" title={t("gui.tab_benchmark")} />
+                <Tab key="analyze" title={t("gui.tab_analyze")} />
+              </Tabs>
+            </NavbarItem>
+          </NavbarContent>
+        )}
 
         <NavbarContent justify="end">
           <NavbarItem>
@@ -36,9 +52,11 @@ export default function NavBar() {
           <NavbarItem>
             <ThemeSwitcher />
           </NavbarItem>
-          <NavbarItem>
-            <Upload />
-          </NavbarItem>
+          {(!isGuiMode || activeTab === "analyze") && (
+            <NavbarItem>
+              <Upload />
+            </NavbarItem>
+          )}
         </NavbarContent>
       </Navbar>
     </div>

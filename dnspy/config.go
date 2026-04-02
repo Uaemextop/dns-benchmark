@@ -55,6 +55,8 @@ func InitFlags() (Config, error) {
 			"\x1b[32mStart testing directly using built-in worldwide DNS servers\x1b[0m\n\n" +
 			"\x1b[33mdnspy -s 114.114.114.114\x1b[0m\n\n" +
 			"\x1b[32mTest a single server\x1b[0m\n\n" +
+			"\x1b[33mdnspy --gui\x1b[0m\n\n" +
+			"\x1b[32mStart GUI mode: launches a local web interface for configuring and running benchmarks\x1b[0m\n\n" +
 			"\x1b[33mdnspy dnspy_benchmark_2024-10-22-08-18.json\x1b[0m\n\n" +
 			"\x1b[32mVisualize and analyze test results\x1b[0m\n\n" +
 			"Parameters:\n")

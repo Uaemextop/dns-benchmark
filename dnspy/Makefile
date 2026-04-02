@@ -1,8 +1,13 @@
 # Default target
 all: run
 
+# Build web UI
+web:
+	@echo "Building web UI..."
+	cd web && pnpm install && pnpm build
+
 # Build target
-build: 
+build: web
 	@echo "Building..."
 	go mod tidy
 	GOOS=darwin GOARCH=amd64 go build -ldflags "-s -w" -tags release -o dnspy-darwin-amd64 .
