@@ -14,12 +14,17 @@ func InitGeoDB() (*geoip2.Reader, error) {
 }
 
 func checkIPGeo(geoDB *geoip2.Reader, ip net.IP) (string, error) {
-	record, err := geoDB.Country(ip)
+	record, err := geoDB.City(ip)
 	if err != nil {
 		return "CDN", err
 	}
 	if record.Country.IsoCode == "" {
 		return "CDN", nil
+	}
+	// Return country code with subdivision (state/region) if available
+	// This provides better granularity for countries like US and MX
+	if len(record.Subdivisions) > 0 && record.Subdivisions[0].IsoCode != "" {
+		return record.Country.IsoCode + "-" + record.Subdivisions[0].IsoCode, nil
 	}
 	return record.Country.IsoCode, nil
 }

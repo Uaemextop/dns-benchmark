@@ -10,3 +10,6 @@ dnspy/dnspy_result_*
 dnspy/dnspy*
 
 *.bak.*
+
+# GeoIP databases (downloaded at build time)
+dnspy/res/*.mmdb

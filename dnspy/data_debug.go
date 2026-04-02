@@ -8,10 +8,12 @@ import (
 	"github.com/oschwald/geoip2-golang"
 )
 
-// geoDataPath is the path to the GeoLite2 country database.
-// This constant defines the relative path of the GeoLite2 country database file.
-// This database is used for IP geolocation queries to determine the country of an IP address.
-const geoDataPath = "./res/Country.mmdb"
+// geoDataPath is the path to the GeoLite2 City database.
+// This constant defines the relative path of the GeoLite2 City database file.
+// This database is used for IP geolocation queries to determine the country and
+// subdivision (state/region) of an IP address, providing better coverage for
+// countries like Mexico and the United States.
+const geoDataPath = "./res/GeoLite2-City.mmdb"
 
 // GetGeoData opens and returns a GeoIP2 database reader.
 // This function attempts to open the GeoLite2 country database file and returns a reader for querying.

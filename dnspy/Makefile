@@ -17,10 +17,10 @@ run:
 	@echo "Running..."
 	go run .
 
-# Update geographic data
+# Update geographic data (City-level for better US/Mexico coverage)
 update-geodata:
-	@echo "Updating geographic data..."
-	curl https://cdn.jsdelivr.net/gh/Loyalsoldier/geoip@release/Country.mmdb -o ./res/Country.mmdb
+	@echo "Updating geographic data (City-level)..."
+	curl -L https://github.com/P3TERX/GeoLite.mmdb/raw/download/GeoLite2-City.mmdb -o ./res/GeoLite2-City.mmdb
 
 # Update domain data
 update-domains:

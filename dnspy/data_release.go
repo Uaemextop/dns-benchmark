@@ -8,11 +8,13 @@ import (
 	"github.com/oschwald/geoip2-golang"
 )
 
-//go:embed res/Country.mmdb
+//go:embed res/GeoLite2-City.mmdb
 var GeoData []byte
 
 // GetGeoData returns a GeoIP2 database reader for IP geolocation queries.
 // This function uses the embedded GeoData byte slice to create a geoip2.Reader instance.
+// The City-level database provides country and subdivision (state/region) information,
+// offering better coverage for countries like Mexico and the United States.
 // Returns:
 //   - *geoip2.Reader: A GeoIP2 database reader on success
 //   - error: An error if creating the reader fails

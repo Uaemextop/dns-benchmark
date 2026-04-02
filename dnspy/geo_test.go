@@ -27,13 +27,16 @@ func TestCheckGeo(t *testing.T) {
 		"https://dns.bebasid.com/unfiltered",
 		"2620:119:53::53",
 		"https://doh.cleanbrowsing.org/doh/family-filter/",
-		// Edge cases
-		"https://1:1:1:1:1:1",
+	}
+	// Servers that return PRIVATE geocode (not an error, but private IP)
+	serversPrivate := []string{
+		"192.168.1.1",
 	}
 	serversErr := []string{
-		"192.168.1.1",
 		"https://dns.goooooogle/dns-query",
 		"",
+		// Edge case: invalid URL format
+		"https://1:1:1:1:1:1",
 	}
 
 	// Test valid server addresses
@@ -42,6 +45,20 @@ func TestCheckGeo(t *testing.T) {
 			ip, geoCode, err := CheckGeo(geoDB, server, true)
 			if err != nil {
 				t.Errorf("CheckGeo(%s) failed: %v", server, err)
+			} else {
+				t.Logf("CheckGeo(%s) succeeded: IP=%s, GeoCode=%s", server, ip, geoCode)
+			}
+		})
+	}
+
+	// Test private IP addresses (should succeed with PRIVATE geocode)
+	for _, server := range serversPrivate {
+		t.Run(server, func(t *testing.T) {
+			ip, geoCode, err := CheckGeo(geoDB, server, true)
+			if err != nil {
+				t.Errorf("CheckGeo(%s) failed: %v", server, err)
+			} else if geoCode != "PRIVATE" {
+				t.Errorf("CheckGeo(%s) expected PRIVATE geocode, got: %s", server, geoCode)
 			} else {
 				t.Logf("CheckGeo(%s) succeeded: IP=%s, GeoCode=%s", server, ip, geoCode)
 			}

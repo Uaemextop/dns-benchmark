@@ -146,11 +146,17 @@ git clone https://github.com/xxnuo/dns-benchmark.git
 cd dns-benchmark/dnspy
 ```
 
-#### 2. Update Data Files (Optional)
+#### 2. Update Data Files (Required for first build)
+
+Download the GeoIP database and domain data:
 
 ```bash
 make update
 ```
+
+This downloads:
+- **GeoLite2-City.mmdb** - City-level GeoIP database for accurate geolocation (supports subdivision/state level for US, Mexico, etc.)
+- **domains.txt** - 10,000 popular domains for DNS performance testing
 
 #### 3. Configure Dependencies
 

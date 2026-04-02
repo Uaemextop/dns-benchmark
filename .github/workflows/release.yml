@@ -52,7 +52,7 @@ jobs:
       - name: Update data
         working-directory: dnspy
         run: |
-          curl https://cdn.jsdelivr.net/gh/Loyalsoldier/geoip@release/Country.mmdb -o ./res/Country.mmdb
+          curl -L https://github.com/P3TERX/GeoLite.mmdb/raw/download/GeoLite2-City.mmdb -o ./res/GeoLite2-City.mmdb
           curl https://cdn.jsdelivr.net/gh/Tantalor93/dnspyre@master/data/10000-domains -o ./res/domains.txt
 
       - name: Build dnspyre
