@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"os/exec"
@@ -12,6 +13,11 @@ import (
 
 // Core test implementation
 func runDnspyre(geoDB *geoip2.Reader, preferIPv4 bool, noAAAA bool, binPath, server, domainsPath string, duration, concurrency int, probability float64) jsonResult {
+	return runDnspyreCtx(context.Background(), geoDB, preferIPv4, noAAAA, binPath, server, domainsPath, duration, concurrency, probability)
+}
+
+// runDnspyreCtx is like runDnspyre but accepts a context for cancellation.
+func runDnspyreCtx(ctx context.Context, geoDB *geoip2.Reader, preferIPv4 bool, noAAAA bool, binPath, server, domainsPath string, duration, concurrency int, probability float64) jsonResult {
 
 	log.WithFields(log.Fields{
 		"target":      server,
@@ -19,6 +25,14 @@ func runDnspyre(geoDB *geoip2.Reader, preferIPv4 bool, noAAAA bool, binPath, ser
 		"concurrency": concurrency,
 		"probability": fmt.Sprintf("%.2f", probability),
 	}).Infof("\x1b[32m%s starting test\x1b[0m", server)
+
+	// Check cancellation early.
+	select {
+	case <-ctx.Done():
+		return jsonResult{}
+	default:
+	}
+
 	// Get server geographic information first
 	ip, geoCode, err := CheckGeo(geoDB, server, preferIPv4)
 	if err != nil {
@@ -33,6 +47,13 @@ func runDnspyre(geoDB *geoip2.Reader, preferIPv4 bool, noAAAA bool, binPath, ser
 			"IP":     ip,
 			"code":   geoCode,
 		}).Infof("\x1b[32m%s resolved successfully\x1b[0m", server)
+	}
+
+	// Check cancellation after geo lookup.
+	select {
+	case <-ctx.Done():
+		return jsonResult{}
+	default:
 	}
 
 	// Run dnspyre
@@ -50,7 +71,7 @@ func runDnspyre(geoDB *geoip2.Reader, preferIPv4 bool, noAAAA bool, binPath, ser
 		args = append(args, "-t", "AAAA")
 	}
 
-	cmd := exec.Command(binPath, args...)
+	cmd := exec.CommandContext(ctx, binPath, args...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -59,6 +80,11 @@ func runDnspyre(geoDB *geoip2.Reader, preferIPv4 bool, noAAAA bool, binPath, ser
 		"target": server,
 	}).Infof("\x1b[32m%s starting test\x1b[0m", server)
 	err = cmd.Run()
+
+	if ctx.Err() != nil {
+		// Cancelled — don't log as error.
+		return jsonResult{}
+	}
 
 	if err != nil {
 		log.WithFields(log.Fields{

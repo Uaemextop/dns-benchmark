@@ -58,6 +58,18 @@ type GuiServer struct {
 
 	sseClientsMu sync.Mutex
 	sseClients   map[chan sseEvent]struct{}
+
+	historyMu sync.RWMutex
+	history   []benchmarkHistoryEntry
+}
+
+// benchmarkHistoryEntry stores metadata about a completed benchmark run.
+type benchmarkHistoryEntry struct {
+	ID        string          `json:"id"`
+	StartedAt string          `json:"startedAt"`
+	Servers   int             `json:"servers"`
+	Duration  int             `json:"duration"`
+	Results   BenchmarkResult `json:"results"`
 }
 
 // NewGuiServer creates a new GuiServer on the given port.
@@ -196,8 +208,13 @@ func (s *GuiServer) handleBenchmarkStart(w http.ResponseWriter, r *http.Request)
 	}
 
 	// Apply defaults.
-	if req.Duration <= 0 {
-		req.Duration = 10
+	if req.Duration < 0 {
+		req.Duration = 0
+	}
+	if req.Duration == 0 {
+		// "Unlimited" mode: use a very large duration that will effectively run
+		// until stopped. 24 hours is long enough for any practical test.
+		req.Duration = 86400
 	}
 	if req.Concurrency <= 0 {
 		req.Concurrency = 10
@@ -310,8 +327,13 @@ func (s *GuiServer) runBenchmark(ctx context.Context, servers []string, req benc
 			default:
 			}
 
-			output := runDnspyre(GeoDB, Cfg.PreferIPv4, req.NoAAAA,
+			output := runDnspyreCtx(ctx, GeoDB, Cfg.PreferIPv4, req.NoAAAA,
 				DnspyreBinPath, srv, DomainsBinPath, req.Duration, req.Concurrency, randomNum)
+
+			// If cancelled, skip result recording.
+			if ctx.Err() != nil {
+				return
+			}
 
 			s.mu.Lock()
 			s.results[srv] = output
@@ -332,6 +354,11 @@ func (s *GuiServer) runBenchmark(ctx context.Context, servers []string, req benc
 
 	wg.Wait()
 
+	// If cancelled, the stop handler already updated state.
+	if ctx.Err() != nil {
+		return
+	}
+
 	s.mu.Lock()
 	s.state = stateCompleted
 	s.cancelFn = nil
@@ -340,6 +367,18 @@ func (s *GuiServer) runBenchmark(ctx context.Context, servers []string, req benc
 		results[k] = v
 	}
 	s.mu.Unlock()
+
+	// Save to history.
+	entry := benchmarkHistoryEntry{
+		ID:        fmt.Sprintf("%d", time.Now().UnixMilli()),
+		StartedAt: time.Now().Format(time.RFC3339),
+		Servers:   len(results),
+		Duration:  req.Duration,
+		Results:   results,
+	}
+	s.historyMu.Lock()
+	s.history = append(s.history, entry)
+	s.historyMu.Unlock()
 
 	log.Info("GUI benchmark complete")
 	s.broadcast(sseEvent{
@@ -429,12 +468,19 @@ func (s *GuiServer) handleBenchmarkStop(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, `{"error":"no benchmark running"}`, http.StatusConflict)
 		return
 	}
-	s.cancelFn()
+	cancel := s.cancelFn
+	s.state = stateIdle
+	s.cancelFn = nil
 	s.mu.Unlock()
 
-	log.Info("GUI benchmark stop requested")
+	// Cancel context — kills running dnspyre subprocesses immediately.
+	cancel()
+
+	log.Info("GUI benchmark stop requested — processes killed")
+	s.broadcast(sseEvent{Type: "error", Message: "benchmark stopped"})
+
 	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprint(w, `{"status":"stopping"}`)
+	fmt.Fprint(w, `{"status":"stopped"}`)
 }
 
 // handleBenchmarkResults returns the latest benchmark results.
@@ -454,6 +500,23 @@ func (s *GuiServer) handleBenchmarkResults(w http.ResponseWriter, r *http.Reques
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(results)
+}
+
+// handleBenchmarkHistory returns the list of past benchmark runs.
+func (s *GuiServer) handleBenchmarkHistory(w http.ResponseWriter, r *http.Request) {
+	setCORS(w)
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	s.historyMu.RLock()
+	hist := make([]benchmarkHistoryEntry, len(s.history))
+	copy(hist, s.history)
+	s.historyMu.RUnlock()
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(hist)
 }
 
 // StartGUI initialises the GUI server, opens the browser, and starts serving.
@@ -476,6 +539,7 @@ func StartGUI(port int) {
 	mux.HandleFunc("/api/benchmark/status", srv.handleBenchmarkStatus)
 	mux.HandleFunc("/api/benchmark/stop", srv.handleBenchmarkStop)
 	mux.HandleFunc("/api/benchmark/results", srv.handleBenchmarkResults)
+	mux.HandleFunc("/api/benchmark/history", srv.handleBenchmarkHistory)
 
 	addr := fmt.Sprintf(":%d", port)
 	url := fmt.Sprintf("http://localhost:%d", port)
