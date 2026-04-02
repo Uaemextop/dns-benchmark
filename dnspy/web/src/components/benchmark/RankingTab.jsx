@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";
 import { ScrollShadow, Tooltip, Chip } from "@nextui-org/react";
 import { MdSpeed as SpeedIcon } from "react-icons/md";
 import { FaChartBar as ChartIcon } from "react-icons/fa";
-import { getRankDisplay, getScoreColor, getLatencyColor } from "./utils";
+import { getRankDisplay, getScoreColor, getLatencyColor, countryCodeToFlag } from "./utils";
 
 /**
  * Ranking tab — top servers sorted by score with improved visual design.
@@ -83,7 +83,7 @@ export default function RankingTab({ topResults, onServerClick }) {
                         variant="flat"
                         className="h-4 text-tiny px-1.5"
                       >
-                        {result.geocode}
+                        {countryCodeToFlag(result.geocode)} {result.geocode}
                       </Chip>
                     )}
                     {result.ipAddress && (

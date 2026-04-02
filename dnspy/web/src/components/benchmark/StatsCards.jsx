@@ -10,7 +10,7 @@ import {
   MdTimelapse as TimelapseIcon,
   MdCheckCircle as CheckCircleIcon,
 } from "react-icons/md";
-import { formatTime, getScoreColor } from "./utils";
+import { formatTime, getScoreColor, countryCodeToFlag } from "./utils";
 
 /**
  * Live-updating stat cards shown during / after a benchmark.
@@ -130,7 +130,7 @@ export default function StatsCards({
               <div className="flex items-center gap-3">
                 {bestServer[1].geocode && (
                   <Chip size="sm" variant="flat" className="text-tiny">
-                    {bestServer[1].geocode}
+                    {countryCodeToFlag(bestServer[1].geocode)} {bestServer[1].geocode}
                   </Chip>
                 )}
                 <div className="text-right">

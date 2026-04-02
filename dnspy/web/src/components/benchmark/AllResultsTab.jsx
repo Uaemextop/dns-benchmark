@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { ScrollShadow, Tooltip, Chip } from "@nextui-org/react";
 import { FaList as ListIcon, FaChartBar as ChartIcon } from "react-icons/fa";
-import { getRankDisplay, getScoreColor, getLatencyColor } from "./utils";
+import { getRankDisplay, getScoreColor, getLatencyColor, countryCodeToFlag } from "./utils";
 
 /**
  * All Results tab — full sorted table of alive servers with improved design.
@@ -101,7 +101,7 @@ export default function AllResultsTab({ results, onServerClick }) {
                     variant="flat"
                     className="h-4 text-tiny px-1.5"
                   >
-                    {result.geocode}
+                    {countryCodeToFlag(result.geocode)} {result.geocode}
                   </Chip>
                 )}
               </span>

@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollShadow, Tooltip, Chip } from "@nextui-org/react";
 import { MdTimelapse as TimelapseIcon } from "react-icons/md";
-import { isAlive, getScoreColor, getLatencyColor } from "./utils";
+import { isAlive, getScoreColor, getLatencyColor, countryCodeToFlag } from "./utils";
 
 /**
  * Live Feed tab — real-time activity log with improved visual design.
@@ -106,7 +106,7 @@ export default function LiveFeedTab({
                     variant="flat"
                     className="h-4 text-tiny hidden sm:flex"
                   >
-                    {r.geocode}
+                    {countryCodeToFlag(r.geocode)} {r.geocode}
                   </Chip>
                 )}
                 {alive ? (

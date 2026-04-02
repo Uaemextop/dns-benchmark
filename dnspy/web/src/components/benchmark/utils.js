@@ -41,6 +41,19 @@ export function getScoreColor(score) {
   return "danger";
 }
 
+/**
+ * Convert a 2-letter ISO 3166-1 alpha-2 country code to its flag emoji.
+ * E.g., "US" → 🇺🇸, "DE" → 🇩🇪, "JP" → 🇯🇵
+ * Returns empty string for invalid or missing codes.
+ */
+export function countryCodeToFlag(code) {
+  if (!code || code.length !== 2) return "";
+  const upper = code.toUpperCase();
+  const cp1 = 0x1f1e6 + (upper.charCodeAt(0) - 65);
+  const cp2 = 0x1f1e6 + (upper.charCodeAt(1) - 65);
+  return String.fromCodePoint(cp1, cp2);
+}
+
 /** Map latency ms to a Tailwind text color class. */
 export function getLatencyColor(ms) {
   if (ms < 50) return "text-green-500";

@@ -11,7 +11,7 @@ import {
   Button,
   Divider,
 } from "@nextui-org/react";
-import { FaChartBar as ChartIcon, FaGlobe as GlobeIcon } from "react-icons/fa";
+import { FaChartBar as ChartIcon } from "react-icons/fa";
 import { Bar, Doughnut, Radar } from "react-chartjs-2";
 import {
   buildRadarData,
@@ -21,7 +21,7 @@ import {
   doughnutOptions,
   barOptions,
 } from "./chartConfigs";
-import { getScoreColor, getLatencyColor } from "./utils";
+import { getScoreColor, getLatencyColor, countryCodeToFlag } from "./utils";
 
 /**
  * Modal dialog showing detailed charts & stats for a single DNS server.
@@ -78,7 +78,7 @@ export default function ServerDetailModal({
                       size="sm"
                       variant="flat"
                       startContent={
-                        <GlobeIcon className="w-2.5 h-2.5 ml-0.5" />
+                        <span className="text-base ml-0.5">{countryCodeToFlag(result.geocode)}</span>
                       }
                     >
                       {result.geocode}
