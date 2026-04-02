@@ -4,12 +4,13 @@ import { useEffect, useRef, useCallback } from "react";
  * Hook that manages the SSE connection for benchmark progress.
  *
  * @param {object} opts
- * @param {Function} opts.onStatus  - Called with status events
+ * @param {Function} opts.onStatus   - Called with status events
  * @param {Function} opts.onProgress - Called with progress events
  * @param {Function} opts.onComplete - Called with complete events
- * @param {Function} opts.onError   - Called with error events
+ * @param {Function} opts.onStopped  - Called with stopped events (partial results saved)
+ * @param {Function} opts.onError    - Called with error events
  */
-export function useSSE({ onStatus, onProgress, onComplete, onError }) {
+export function useSSE({ onStatus, onProgress, onComplete, onStopped, onError }) {
   const esRef = useRef(null);
 
   const connect = useCallback(() => {
@@ -31,6 +32,9 @@ export function useSSE({ onStatus, onProgress, onComplete, onError }) {
           case "complete":
             onComplete?.(data);
             break;
+          case "stopped":
+            onStopped?.(data);
+            break;
           case "error":
             onError?.(data);
             break;
@@ -45,7 +49,7 @@ export function useSSE({ onStatus, onProgress, onComplete, onError }) {
         if (esRef.current === es) connect();
       }, 3000);
     };
-  }, [onStatus, onProgress, onComplete, onError]);
+  }, [onStatus, onProgress, onComplete, onStopped, onError]);
 
   useEffect(() => {
     connect();

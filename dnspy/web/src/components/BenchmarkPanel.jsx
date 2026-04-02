@@ -9,6 +9,7 @@ import {
   Tabs,
   Tab,
   Chip,
+  Input,
   useDisclosure,
 } from "@nextui-org/react";
 import { Toaster } from "sonner";
@@ -16,6 +17,7 @@ import {
   FaDownload as DownloadIcon,
   FaTrophy as TrophyIcon,
   FaList as ListIcon,
+  FaSearch as SearchIcon,
 } from "react-icons/fa";
 import { MdSpeed as SpeedIcon } from "react-icons/md";
 import {
@@ -70,6 +72,7 @@ export default function BenchmarkPanel({ onSwitchToAnalyze }) {
   const [resultsTab, setResultsTab] = useState("ranking");
   const [selectedServer, setSelectedServer] = useState(null);
   const [selectedResult, setSelectedResult] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const benchmark = useBenchmark(t);
 
@@ -91,9 +94,17 @@ export default function BenchmarkPanel({ onSwitchToAnalyze }) {
   const topResults = [...aliveEntries].sort(
     (a, b) => (b[1].score?.total || 0) - (a[1].score?.total || 0)
   );
-  const allResultsSorted = [...aliveEntries].sort(
-    (a, b) => (b[1].score?.total || 0) - (a[1].score?.total || 0)
-  );
+
+  // Apply search filter
+  const filteredResults = searchQuery
+    ? topResults.filter(
+        ([server, result]) =>
+          server.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (result.geocode || "")
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase())
+      )
+    : topResults;
 
   const hasResults = Object.keys(partialResults).length > 0;
   const isDone = !isRunning && completed > 0;
@@ -105,17 +116,17 @@ export default function BenchmarkPanel({ onSwitchToAnalyze }) {
   };
 
   return (
-    <div className="p-4 md:p-6 flex flex-col gap-5 max-w-6xl mx-auto">
+    <div className="p-4 md:p-6 flex flex-col gap-5 max-w-7xl mx-auto">
       <Toaster position="top-center" expand={false} richColors />
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-400 text-white shadow-lg shadow-blue-500/25">
-            <SpeedIcon className="w-7 h-7" />
+          <div className="p-3 rounded-2xl bg-gradient-to-br from-blue-500 via-blue-600 to-cyan-500 text-white shadow-xl shadow-blue-500/30">
+            <SpeedIcon className="w-8 h-8" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent">
+            <h1 className="text-2xl md:text-3xl font-extrabold bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500 bg-clip-text text-transparent">
               {t("gui.title")}
             </h1>
             <p className="text-sm text-default-500">{t("gui.subtitle")}</p>
@@ -128,7 +139,7 @@ export default function BenchmarkPanel({ onSwitchToAnalyze }) {
                 size="sm"
                 variant="flat"
                 color="secondary"
-                startContent={<DownloadIcon />}
+                startContent={<DownloadIcon className="w-3.5 h-3.5" />}
                 onClick={handleExport}
               >
                 {t("gui.export")}
@@ -138,10 +149,10 @@ export default function BenchmarkPanel({ onSwitchToAnalyze }) {
               <Button
                 size="sm"
                 color="primary"
-                variant="flat"
+                variant="shadow"
                 onClick={onSwitchToAnalyze}
               >
-                {t("gui.view_analysis")}
+                {t("gui.view_analysis")} →
               </Button>
             )}
           </div>
@@ -158,6 +169,7 @@ export default function BenchmarkPanel({ onSwitchToAnalyze }) {
           avgSuccessRate={avgSuccessRate}
           avgQPS={avgQPS}
           elapsedTime={elapsedTime}
+          bestServer={topResults.length > 0 ? topResults[0] : null}
         />
       )}
 
@@ -176,6 +188,7 @@ export default function BenchmarkPanel({ onSwitchToAnalyze }) {
         <CompletionBanner
           completed={completed}
           deadCount={deadCount}
+          bestServer={topResults.length > 0 ? topResults[0] : null}
           onSwitchToAnalyze={onSwitchToAnalyze}
         />
       )}
@@ -203,69 +216,109 @@ export default function BenchmarkPanel({ onSwitchToAnalyze }) {
         />
 
         {/* Results Panel */}
-        <Card className="flex-1 shadow-md">
-          <CardHeader className="pb-0">
-            <Tabs
-              selectedKey={resultsTab}
-              onSelectionChange={(key) => setResultsTab(String(key))}
-              variant="underlined"
-              color="primary"
-              size="sm"
-            >
-              <Tab
-                key="ranking"
-                title={
-                  <div className="flex items-center gap-1.5">
-                    <TrophyIcon className="w-3.5 h-3.5" />
-                    <span>{t("gui.top_results")}</span>
-                    {topResults.length > 0 && (
-                      <Chip size="sm" variant="flat" className="h-5 min-w-0">
-                        {topResults.length}
-                      </Chip>
-                    )}
-                  </div>
-                }
-              />
-              <Tab
-                key="live"
-                title={
-                  <div className="flex items-center gap-1.5">
-                    <div
-                      className={`w-2 h-2 rounded-full ${
-                        isRunning
-                          ? "bg-green-500 animate-pulse"
-                          : "bg-default-300"
-                      }`}
-                    />
-                    <span>{t("gui.live_feed")}</span>
-                    {activityLog.length > 0 && (
-                      <Chip size="sm" variant="flat" className="h-5 min-w-0">
-                        {activityLog.length}
-                      </Chip>
-                    )}
-                  </div>
-                }
-              />
-              <Tab
-                key="all"
-                title={
-                  <div className="flex items-center gap-1.5">
-                    <ListIcon className="w-3.5 h-3.5" />
-                    <span>{t("gui.all_results")}</span>
-                    {allResultsSorted.length > 0 && (
-                      <Chip size="sm" variant="flat" className="h-5 min-w-0">
-                        {allResultsSorted.length}
-                      </Chip>
-                    )}
-                  </div>
-                }
-              />
-            </Tabs>
+        <Card className="flex-1 shadow-lg border-none">
+          <CardHeader className="pb-0 flex flex-col gap-3">
+            <div className="flex items-center justify-between w-full">
+              <Tabs
+                selectedKey={resultsTab}
+                onSelectionChange={(key) => setResultsTab(String(key))}
+                variant="underlined"
+                color="primary"
+                size="sm"
+                classNames={{
+                  tabList: "gap-4",
+                  tab: "px-2 h-9",
+                }}
+              >
+                <Tab
+                  key="ranking"
+                  title={
+                    <div className="flex items-center gap-1.5">
+                      <TrophyIcon className="w-3.5 h-3.5" />
+                      <span>{t("gui.top_results")}</span>
+                      {topResults.length > 0 && (
+                        <Chip
+                          size="sm"
+                          variant="flat"
+                          color="primary"
+                          className="h-5 min-w-0"
+                        >
+                          {topResults.length}
+                        </Chip>
+                      )}
+                    </div>
+                  }
+                />
+                <Tab
+                  key="live"
+                  title={
+                    <div className="flex items-center gap-1.5">
+                      <div
+                        className={`w-2 h-2 rounded-full ${
+                          isRunning
+                            ? "bg-green-500 animate-pulse"
+                            : "bg-default-300"
+                        }`}
+                      />
+                      <span>{t("gui.live_feed")}</span>
+                      {activityLog.length > 0 && (
+                        <Chip
+                          size="sm"
+                          variant="flat"
+                          className="h-5 min-w-0"
+                        >
+                          {activityLog.length}
+                        </Chip>
+                      )}
+                    </div>
+                  }
+                />
+                <Tab
+                  key="all"
+                  title={
+                    <div className="flex items-center gap-1.5">
+                      <ListIcon className="w-3.5 h-3.5" />
+                      <span>{t("gui.all_results")}</span>
+                      {filteredResults.length > 0 && (
+                        <Chip
+                          size="sm"
+                          variant="flat"
+                          className="h-5 min-w-0"
+                        >
+                          {filteredResults.length}
+                        </Chip>
+                      )}
+                    </div>
+                  }
+                />
+              </Tabs>
+            </div>
+
+            {/* Search bar for results */}
+            {(resultsTab === "all" || resultsTab === "ranking") &&
+              topResults.length > 0 && (
+                <Input
+                  size="sm"
+                  placeholder={t("gui.search_servers")}
+                  value={searchQuery}
+                  onValueChange={setSearchQuery}
+                  startContent={
+                    <SearchIcon className="w-3.5 h-3.5 text-default-400" />
+                  }
+                  isClearable
+                  onClear={() => setSearchQuery("")}
+                  className="max-w-xs"
+                  classNames={{
+                    inputWrapper:
+                      "bg-default-100 hover:bg-default-200 shadow-none",
+                  }}
+                />
+              )}
           </CardHeader>
-          <CardBody className="pt-2">
+          <CardBody className="pt-3">
             {resultsTab === "ranking" && (
               <RankingTab
-                topResults={topResults}
+                topResults={filteredResults}
                 onServerClick={handleServerClick}
               />
             )}
@@ -278,7 +331,7 @@ export default function BenchmarkPanel({ onSwitchToAnalyze }) {
             )}
             {resultsTab === "all" && (
               <AllResultsTab
-                results={allResultsSorted}
+                results={filteredResults}
                 onServerClick={handleServerClick}
               />
             )}

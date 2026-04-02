@@ -303,12 +303,7 @@ func (s *GuiServer) runBenchmark(ctx context.Context, servers []string, req benc
 		// Check for cancellation before launching the next worker.
 		select {
 		case <-ctx.Done():
-			log.Info("GUI benchmark cancelled")
-			s.mu.Lock()
-			s.state = stateIdle
-			s.cancelFn = nil
-			s.mu.Unlock()
-			s.broadcast(sseEvent{Type: "error", Message: "benchmark cancelled"})
+			log.Info("GUI benchmark cancelled — stop handler manages state")
 			return
 		default:
 		}
@@ -450,7 +445,7 @@ func (s *GuiServer) handleBenchmarkStatus(w http.ResponseWriter, r *http.Request
 	}
 }
 
-// handleBenchmarkStop cancels a running benchmark.
+// handleBenchmarkStop cancels a running benchmark and saves partial results.
 func (s *GuiServer) handleBenchmarkStop(w http.ResponseWriter, r *http.Request) {
 	setCORS(w)
 	if r.Method == http.MethodOptions {
@@ -469,18 +464,41 @@ func (s *GuiServer) handleBenchmarkStop(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	cancel := s.cancelFn
-	s.state = stateIdle
+	s.state = stateCompleted
 	s.cancelFn = nil
+
+	// Snapshot partial results collected so far.
+	partialResults := make(BenchmarkResult, len(s.results))
+	for k, v := range s.results {
+		partialResults[k] = v
+	}
 	s.mu.Unlock()
 
 	// Cancel context — kills running dnspyre subprocesses immediately.
 	cancel()
 
-	log.Info("GUI benchmark stop requested — processes killed")
-	s.broadcast(sseEvent{Type: "error", Message: "benchmark stopped"})
+	// Save partial results to history so they are not lost.
+	if len(partialResults) > 0 {
+		entry := benchmarkHistoryEntry{
+			ID:        fmt.Sprintf("%d", time.Now().UnixMilli()),
+			StartedAt: time.Now().Format(time.RFC3339),
+			Servers:   len(partialResults),
+			Duration:  0,
+			Results:   partialResults,
+		}
+		s.historyMu.Lock()
+		s.history = append(s.history, entry)
+		s.historyMu.Unlock()
+	}
+
+	log.WithField("results", len(partialResults)).Info("GUI benchmark stopped — partial results saved")
+	s.broadcast(sseEvent{Type: "stopped", Results: partialResults, Message: "benchmark stopped"})
 
 	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprint(w, `{"status":"stopped"}`)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status":  "stopped",
+		"results": len(partialResults),
+	})
 }
 
 // handleBenchmarkResults returns the latest benchmark results.

@@ -5,115 +5,140 @@ import { FaChartBar as ChartIcon } from "react-icons/fa";
 import { getRankDisplay, getScoreColor, getLatencyColor } from "./utils";
 
 /**
- * Ranking tab — top servers sorted by score with medal display.
+ * Ranking tab — top servers sorted by score with improved visual design.
  */
 export default function RankingTab({ topResults, onServerClick }) {
   const { t } = useTranslation();
 
   if (topResults.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-center">
-        <div className="p-4 rounded-full bg-default-100 mb-4">
-          <SpeedIcon className="w-8 h-8 text-default-300" />
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <div className="p-5 rounded-2xl bg-gradient-to-br from-default-100 to-default-50 mb-4 shadow-inner">
+          <SpeedIcon className="w-10 h-10 text-default-300" />
         </div>
-        <p className="text-default-400 font-medium">{t("gui.not_running")}</p>
-        <p className="text-xs text-default-300 mt-1">
+        <p className="text-default-500 font-semibold text-base">
+          {t("gui.not_running")}
+        </p>
+        <p className="text-sm text-default-400 mt-1 max-w-xs">
           {t("gui.not_running_hint")}
         </p>
       </div>
     );
   }
 
-  return (
-    <ScrollShadow className="max-h-[500px]">
-      <div className="flex flex-col gap-2">
-        {topResults.slice(0, 20).map(([server, result], index) => (
-          <div
-            key={server}
-            onClick={() => onServerClick(server, result)}
-            className={`flex items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-200 cursor-pointer ${
-              index === 0
-                ? "bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 border border-amber-200/50 dark:border-amber-700/30 hover:shadow-md"
-                : index === 1
-                ? "bg-gradient-to-r from-slate-50 to-gray-50 dark:from-slate-900/20 dark:to-gray-900/20 border border-slate-200/50 dark:border-slate-700/30 hover:shadow-md"
-                : index === 2
-                ? "bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 border border-orange-200/50 dark:border-orange-700/30 hover:shadow-md"
-                : "bg-default-50 hover:bg-default-100 border border-transparent hover:shadow-sm"
-            }`}
-          >
-            <div className="flex items-center gap-2.5 min-w-0 flex-1">
-              <span
-                className={`w-7 text-center ${
-                  index < 3
-                    ? "text-lg"
-                    : "text-xs font-bold text-default-400"
-                }`}
-              >
-                {getRankDisplay(index)}
-              </span>
-              <div className="min-w-0 flex-1">
-                <Tooltip content={`${server} — ${t("gui.click_details")}`}>
-                  <span className="text-sm font-medium truncate block max-w-[160px]">
-                    {server}
-                  </span>
-                </Tooltip>
-                {result.geocode && (
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <Chip size="sm" variant="flat" className="h-4 text-tiny">
-                      {result.geocode}
-                    </Chip>
-                  </div>
-                )}
-              </div>
-            </div>
+  const rankStyles = [
+    "bg-gradient-to-r from-amber-50 via-yellow-50 to-amber-50 dark:from-amber-950/30 dark:via-yellow-950/20 dark:to-amber-950/30 border-amber-300/60 dark:border-amber-700/40 shadow-sm shadow-amber-200/50",
+    "bg-gradient-to-r from-slate-50 via-gray-50 to-slate-50 dark:from-slate-950/30 dark:via-gray-950/20 dark:to-slate-950/30 border-slate-300/60 dark:border-slate-700/40 shadow-sm shadow-slate-200/50",
+    "bg-gradient-to-r from-orange-50 via-amber-50 to-orange-50 dark:from-orange-950/30 dark:via-amber-950/20 dark:to-orange-950/30 border-orange-300/60 dark:border-orange-700/40 shadow-sm shadow-orange-200/50",
+  ];
 
-            <div className="flex items-center gap-3 flex-shrink-0">
-              <div className="hidden sm:flex flex-col items-end gap-0.5">
-                <span
-                  className={`text-xs font-medium ${getLatencyColor(
-                    result.latencyStats?.meanMs || 0
-                  )}`}
+  return (
+    <ScrollShadow className="max-h-[520px]">
+      <div className="flex flex-col gap-2">
+        {topResults.slice(0, 30).map(([server, result], index) => {
+          const latency = result.latencyStats?.meanMs || 0;
+          const score = result.score?.total || 0;
+          const qps = result.queriesPerSecond || 0;
+
+          return (
+            <div
+              key={server}
+              onClick={() => onServerClick(server, result)}
+              className={`flex items-center justify-between px-3.5 py-3 rounded-xl transition-all duration-200 cursor-pointer border ${
+                index < 3
+                  ? rankStyles[index]
+                  : "bg-content1 hover:bg-default-100 border-transparent hover:border-default-200/50 hover:shadow-sm"
+              }`}
+            >
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <div
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                    index === 0
+                      ? "bg-gradient-to-br from-amber-400 to-yellow-500 text-white shadow-md shadow-amber-400/40"
+                      : index === 1
+                      ? "bg-gradient-to-br from-slate-400 to-gray-500 text-white shadow-md shadow-slate-400/40"
+                      : index === 2
+                      ? "bg-gradient-to-br from-orange-400 to-amber-500 text-white shadow-md shadow-orange-400/40"
+                      : "bg-default-100 text-default-500"
+                  }`}
                 >
-                  {result.latencyStats?.meanMs || 0}ms
-                </span>
-                <span className="text-tiny text-default-400">
-                  {(result.queriesPerSecond || 0).toFixed(0)} QPS
-                </span>
-              </div>
-              <div className="hidden md:block w-14">
-                <div className="h-1.5 rounded-full bg-default-200 overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all ${
-                      (result.latencyStats?.meanMs || 0) < 50
-                        ? "bg-green-500"
-                        : (result.latencyStats?.meanMs || 0) < 150
-                        ? "bg-yellow-500"
-                        : "bg-red-500"
+                  <span
+                    className={`${
+                      index < 3 ? "text-sm" : "text-xs font-bold"
                     }`}
-                    style={{
-                      width: `${Math.min(
-                        100,
-                        Math.max(
-                          5,
-                          100 - (result.latencyStats?.meanMs || 0) / 5
-                        )
-                      )}%`,
-                    }}
-                  />
+                  >
+                    {getRankDisplay(index)}
+                  </span>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <Tooltip content={`${server} — ${t("gui.click_details")}`}>
+                    <p className="text-sm font-semibold truncate max-w-[180px]">
+                      {server}
+                    </p>
+                  </Tooltip>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    {result.geocode && (
+                      <Chip
+                        size="sm"
+                        variant="flat"
+                        className="h-4 text-tiny px-1.5"
+                      >
+                        {result.geocode}
+                      </Chip>
+                    )}
+                    {result.ipAddress && (
+                      <span className="text-tiny text-default-400 hidden lg:inline">
+                        {result.ipAddress}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
-              <Chip
-                size="sm"
-                color={getScoreColor(result.score?.total || 0)}
-                variant="flat"
-                className="font-bold min-w-[52px] text-center"
-              >
-                {(result.score?.total || 0).toFixed(1)}
-              </Chip>
-              <ChartIcon className="w-3 h-3 text-default-300" />
+
+              <div className="flex items-center gap-3 flex-shrink-0">
+                <div className="hidden sm:flex flex-col items-end gap-0.5">
+                  <span
+                    className={`text-xs font-bold ${getLatencyColor(latency)}`}
+                  >
+                    {latency}ms
+                  </span>
+                  <span className="text-tiny text-default-400 font-medium">
+                    {qps.toFixed(0)} QPS
+                  </span>
+                </div>
+                {/* Latency bar visualization */}
+                <div className="hidden md:block w-16">
+                  <div className="h-2 rounded-full bg-default-200 overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        latency < 50
+                          ? "bg-gradient-to-r from-green-400 to-emerald-500"
+                          : latency < 150
+                          ? "bg-gradient-to-r from-yellow-400 to-amber-500"
+                          : "bg-gradient-to-r from-red-400 to-rose-500"
+                      }`}
+                      style={{
+                        width: `${Math.min(
+                          100,
+                          Math.max(8, 100 - latency / 5)
+                        )}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+                <Chip
+                  size="sm"
+                  color={getScoreColor(score)}
+                  variant="shadow"
+                  className="font-bold min-w-[52px] text-center"
+                >
+                  {score.toFixed(1)}
+                </Chip>
+                <ChartIcon className="w-3.5 h-3.5 text-default-300" />
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </ScrollShadow>
   );

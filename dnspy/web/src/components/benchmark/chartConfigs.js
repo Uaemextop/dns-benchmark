@@ -1,5 +1,6 @@
 /**
  * Chart.js configuration builders for the server detail modal.
+ * Improved with better colors, gradients, and responsive options.
  */
 
 /** Build radar chart data for score breakdown. */
@@ -20,10 +21,14 @@ export function buildRadarData(result, t) {
           result.score?.errorRate || 0,
           result.score?.qps || 0,
         ],
-        backgroundColor: "rgba(59, 130, 246, 0.2)",
-        borderColor: "rgba(59, 130, 246, 1)",
-        borderWidth: 2,
-        pointBackgroundColor: "rgba(59, 130, 246, 1)",
+        backgroundColor: "rgba(99, 102, 241, 0.15)",
+        borderColor: "rgba(99, 102, 241, 0.9)",
+        borderWidth: 2.5,
+        pointBackgroundColor: "rgba(99, 102, 241, 1)",
+        pointBorderColor: "#fff",
+        pointBorderWidth: 2,
+        pointRadius: 5,
+        pointHoverRadius: 7,
       },
     ],
   };
@@ -47,16 +52,28 @@ export function buildLatencyBarData(result, t) {
           result.latencyStats?.maxMs || 0,
         ],
         backgroundColor: [
+          "rgba(34, 197, 94, 0.7)",
+          "rgba(34, 197, 94, 0.6)",
+          "rgba(234, 179, 8, 0.6)",
+          "rgba(234, 179, 8, 0.7)",
+          "rgba(249, 115, 22, 0.6)",
+          "rgba(249, 115, 22, 0.7)",
+          "rgba(99, 102, 241, 0.7)",
+          "rgba(239, 68, 68, 0.7)",
+        ],
+        borderColor: [
           "#22c55e",
           "#22c55e",
           "#eab308",
           "#eab308",
           "#f97316",
           "#f97316",
-          "#3b82f6",
+          "#6366f1",
           "#ef4444",
         ],
-        borderRadius: 4,
+        borderWidth: 1.5,
+        borderRadius: 6,
+        borderSkipped: false,
       },
     ],
   };
@@ -77,14 +94,21 @@ export function buildRequestDonutData(result, t) {
           result.totalErrorResponses || 0,
           result.totalIOErrors || 0,
         ],
-        backgroundColor: ["#22c55e", "#ef4444", "#f97316"],
-        borderWidth: 0,
+        backgroundColor: [
+          "rgba(34, 197, 94, 0.8)",
+          "rgba(239, 68, 68, 0.8)",
+          "rgba(249, 115, 22, 0.8)",
+        ],
+        hoverBackgroundColor: ["#22c55e", "#ef4444", "#f97316"],
+        borderWidth: 2,
+        borderColor: "rgba(255, 255, 255, 0.8)",
+        spacing: 2,
       },
     ],
   };
 }
 
-/** Common chart options. */
+/** Common chart options with improved styling. */
 export const radarOptions = {
   responsive: true,
   maintainAspectRatio: false,
@@ -92,30 +116,99 @@ export const radarOptions = {
     r: {
       beginAtZero: true,
       max: 100,
-      ticks: { stepSize: 20, font: { size: 10 } },
-      pointLabels: { font: { size: 11 } },
+      ticks: {
+        stepSize: 20,
+        font: { size: 10 },
+        backdropColor: "transparent",
+        color: "rgba(100, 116, 139, 0.7)",
+      },
+      pointLabels: {
+        font: { size: 12, weight: "600" },
+        color: "rgba(71, 85, 105, 0.9)",
+      },
+      grid: {
+        color: "rgba(148, 163, 184, 0.15)",
+      },
+      angleLines: {
+        color: "rgba(148, 163, 184, 0.15)",
+      },
     },
   },
-  plugins: { legend: { display: false } },
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      backgroundColor: "rgba(15, 23, 42, 0.9)",
+      titleFont: { size: 12 },
+      bodyFont: { size: 11 },
+      padding: 10,
+      cornerRadius: 8,
+    },
+  },
 };
 
 export const doughnutOptions = {
   responsive: true,
   maintainAspectRatio: false,
-  cutout: "60%",
+  cutout: "65%",
   plugins: {
-    legend: { position: "bottom", labels: { font: { size: 11 } } },
+    legend: {
+      position: "bottom",
+      labels: {
+        font: { size: 11, weight: "500" },
+        padding: 12,
+        usePointStyle: true,
+        pointStyleWidth: 8,
+      },
+    },
+    tooltip: {
+      backgroundColor: "rgba(15, 23, 42, 0.9)",
+      titleFont: { size: 12 },
+      bodyFont: { size: 11 },
+      padding: 10,
+      cornerRadius: 8,
+    },
   },
 };
 
 export const barOptions = {
   responsive: true,
   maintainAspectRatio: false,
-  plugins: { legend: { display: false } },
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      backgroundColor: "rgba(15, 23, 42, 0.9)",
+      titleFont: { size: 12 },
+      bodyFont: { size: 11 },
+      padding: 10,
+      cornerRadius: 8,
+      callbacks: {
+        label: (ctx) => `${ctx.parsed.y} ms`,
+      },
+    },
+  },
   scales: {
     y: {
       beginAtZero: true,
-      title: { display: true, text: "ms", font: { size: 11 } },
+      title: {
+        display: true,
+        text: "ms",
+        font: { size: 11, weight: "600" },
+        color: "rgba(100, 116, 139, 0.8)",
+      },
+      grid: {
+        color: "rgba(148, 163, 184, 0.1)",
+      },
+      ticks: {
+        font: { size: 10 },
+        color: "rgba(100, 116, 139, 0.7)",
+      },
+    },
+    x: {
+      grid: { display: false },
+      ticks: {
+        font: { size: 10, weight: "500" },
+        color: "rgba(100, 116, 139, 0.8)",
+      },
     },
   },
 };

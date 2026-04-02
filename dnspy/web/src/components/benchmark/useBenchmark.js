@@ -93,10 +93,35 @@ export function useBenchmark(t) {
     [t]
   );
 
+  const handleSSEStopped = useCallback(
+    (data) => {
+      setIsRunning(false);
+      setCurrentServer("");
+      if (data.results && Object.keys(data.results).length > 0) {
+        setJsonData(data.results);
+        localStorage.setItem("dnsAnalyzerData", JSON.stringify(data.results));
+        toast.success(t("gui.benchmark_stopped_saved"), {
+          description: t("gui.benchmark_stopped_saved_desc", {
+            count: Object.keys(data.results).length,
+          }),
+          duration: 5000,
+          className: "dark:text-neutral-200",
+        });
+      } else {
+        toast.info(t("gui.benchmark_stopped"), {
+          duration: 2000,
+          className: "dark:text-neutral-200",
+        });
+      }
+    },
+    [t, setJsonData]
+  );
+
   useSSE({
     onStatus: handleSSEStatus,
     onProgress: handleSSEProgress,
     onComplete: handleSSEComplete,
+    onStopped: handleSSEStopped,
     onError: handleSSEError,
   });
 

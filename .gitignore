@@ -13,3 +13,4 @@ dnspy/dnspy*
 
 # GeoIP databases (downloaded at build time)
 dnspy/res/*.mmdb
+node_modules/
