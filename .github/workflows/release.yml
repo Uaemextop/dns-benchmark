@@ -49,11 +49,23 @@ jobs:
             echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
           fi
 
-      - name: Update data
+      - name: Download GeoIP database
         working-directory: dnspy
         run: |
-          curl -L https://github.com/P3TERX/GeoLite.mmdb/raw/download/GeoLite2-City.mmdb -o ./res/GeoLite2-City.mmdb
-          curl https://cdn.jsdelivr.net/gh/Tantalor93/dnspyre@master/data/10000-domains -o ./res/domains.txt
+          echo "Downloading GeoLite2-City.mmdb (City-level GeoIP database)..."
+          curl -fSL --retry 3 --retry-delay 5 \
+            https://github.com/P3TERX/GeoLite.mmdb/raw/download/GeoLite2-City.mmdb \
+            -o ./res/GeoLite2-City.mmdb
+          echo "GeoLite2-City.mmdb size: $(du -h ./res/GeoLite2-City.mmdb | cut -f1)"
+          file ./res/GeoLite2-City.mmdb
+
+      - name: Download domain data
+        working-directory: dnspy
+        run: |
+          curl -fSL --retry 3 --retry-delay 5 \
+            https://cdn.jsdelivr.net/gh/Tantalor93/dnspyre@master/data/10000-domains \
+            -o ./res/domains.txt
+          echo "domains.txt lines: $(wc -l < ./res/domains.txt)"
 
       - name: Build dnspyre
         working-directory: dnspy
