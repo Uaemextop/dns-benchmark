@@ -1,171 +1,66 @@
-# dnspy - DNS Server Performance Testing Tool
+# dnspy - DNS 服务器的可访问性和性能测试工具
 
-[English](./README.en.md) | [中文](./README.md)
+[English](./README.md) | [中文](./README.en.md)
 
-## Project Overview
+## 项目简介
 
-DNS services in many regions are often hijacked by ISPs, injecting various advertisements and causing privacy concerns. To ensure a safe and reliable internet experience, we need to find trustworthy DNS services.
+国内 DNS 服务常遭运营商劫持，被插入各种广告，同时存在隐私泄露风险。为了保障安全可靠的上网体验，我们需要寻找值得信赖的 DNS 服务。
 
-There are not many similar tools available. The well-known DNSJumper only supports Windows and has limitations such as limited data sources and single evaluation dimensions.
+现有的同类工具并不多，较为知名的 DNSJumper 仅支持 Windows 平台，且存在数据源较少、评测维度单一等问题。
 
-Therefore, we developed this tool to test available DNS servers and their performance in your local network environment. This tool is written in Golang and supports cross-platform use on Windows, macOS, and Linux.
+因此开发了这款工具，用于测试本地网络环境下可用的 DNS 服务器及其性能表现。该工具使用 Golang 编写，跨平台支持 Windows、macOS、Linux。
 
-Additionally, we provide a visual data analysis dashboard that allows you to easily understand which DNS servers are available 😊
+并且配套提供可视化数据分析面板，让您一目了然地了解可用的 DNS 服务器 😊
 
-**Pro Tip**: Click on the bar charts in the data analysis dashboard to copy server addresses.
+**温馨提示**：点击数据分析面板中的柱状图即可复制服务器地址。
 
-**Usage Flow**: Follow the guide below to download the testing tool and obtain a JSON file with test results, then open the data analysis dashboard website to upload and analyze the data. The website does not store any data.
+**使用流程**：按照下文指导下载测试工具并获得测试结果的 JSON 文件，然后打开数据分析面板网站上传数据即可分析。网站不存储任何数据。
 
-## Data Analysis Dashboard Preview
+## 数据分析面板预览
 
-![Data Analysis Dashboard Preview](https://github.com/user-attachments/assets/c743f7ba-4d77-4d16-8515-02c0dc99ddfa)
+![数据分析面板预览](https://github.com/user-attachments/assets/c743f7ba-4d77-4d16-8515-02c0dc99ddfa)
 
-[Data Analysis Dashboard (with Sample Data)](https://bench.dash.2020818.xyz)
+[数据分析面板（内含示例数据）](https://bench.dash.2020818.xyz)
 
-## Usage
+## 使用方式
 
 ![dnspy](https://github.com/user-attachments/assets/a499d2fc-ffcd-4b71-a0dd-d6e5839792dd)
 
-### 1. Download the Tool
+### 1. 下载工具
 
-From the [releases](https://github.com/xxnuo/dns-benchmark/releases) page of this repository, download the corresponding `dnspy-*` file according to your system architecture.
+在本仓库的 [releases](https://github.com/xxnuo/dns-benchmark/releases) 页面中，根据您的系统架构下载对应的 `dnspy-*` 文件。
 
-For example: macOS users with M-series processors should download the `dnspy-darwin-arm64` file.
+例如：M 系列处理器的 macOS 用户应下载 `dnspy-darwin-arm64` 文件。
 
-### 2. Prepare Testing Environment
+### 2. 准备测试环境
 
-**Important Notice**: You must disable all proxy software's Tun mode and virtual network card mode, otherwise it will severely affect the accuracy of test results.
+**重要提示**：必须关闭所有代理软件的 Tun 模式、虚拟网卡模式，否则会严重影响测试结果的准确性。
 
-### 3. Run the Test
+### 3. 运行测试
 
-Rename the downloaded file to `dnspy` (`dnspy.exe` on Windows), open a terminal, navigate to the directory containing the file, and execute the following commands:
+将下载的文件重命名为 `dnspy`（Windows 系统为 `dnspy.exe`），然后打开终端，切换到该文件所在的目录，执行以下命令：
 
 ```bash
 unset http_proxy https_proxy all_proxy HTTP_PROXY HTTPS_PROXY ALL_PROXY
 ./dnspy
 ```
 
-Follow the prompts to start testing.
+按照提示输入即可开始测试。
 
-### 4. Testing Instructions
+### 4. 测试说明
 
-The program uses multi-threading mode by default to speed up testing.
+程序默认使用多线程模式以加快测试速度。
 
-> **Performance Requirements**: The default parameters (10 threads) require at least 1 MB/s network bandwidth (both upload and download) and at least a 4-core processor.
+> **性能要求**：默认参数（10 个线程）需要至少上下行 1 MB/s 的网络带宽和至少 4 核心处理器。
 >
-> If your network or processor performance is insufficient, it may lead to inaccurate test results. It is recommended to reduce the number of threads using the `-w` parameter.
+> 如果网络或处理器性能不足，可能导致测试结果不准确，建议通过 `-w` 参数降低线程数。
 
-After the test is complete, the results will be output to the current directory with a filename format like `dnspy_result_2024-11-07-17-32-13.json`.
+测试完成后，结果将输出到当前目录下，文件名格式为 `dnspy_result_2024-11-07-17-32-13.json`。
 
-### 5. View Results
+### 5. 查看结果
 
-Following the program prompt, enter `Y` or `y` or simply press Enter, and the program will automatically open the data analysis dashboard website. Click the "Read Analysis" button in the upper right corner of the website, select the JSON file just generated, and you can view the visualized test results.
+按程序提示输入 `Y` 或 `y` 或直接按回车键，程序将自动打开数据分析面板网站。点击网站右上角的"读取分析"按钮，选择刚生成的 JSON 文件，即可查看可视化测试结果。
 
-## Available Parameters
+## 许可证
 
-```bash
-~> dnspy -h
-
-Usage Examples:
-
-  dnspy
-    Start testing directly using built-in world domains
-
-  dnspy -s 114.114.114.114
-    Test a single server
-
-  dnspy dnspy_benchmark_2024-10-22-08-18.json
-    Visualize and analyze test results
-
-Parameter Description:
-  -c, --concurrency int   Number of concurrent queries per test
-                          (default 10)
-
-  -d, --domains string    File path storing domain names for batch testing
-                          Must be a file path relative to current program working directory
-                          File format: one domain per line
-                          If not modified, uses built-in 10000 popular domains
-                          (default "@sampleDomains@")
-
-  -t, --duration int      Duration of each test in seconds
-                          (default 10)
-
-  -f, --file string       File path storing server data for batch testing
-                          Must be a file path relative to current program working directory
-                          File format: one server address per line
-
-  -g, --geo string        Independent feature: Query IP or domain geolocation using GeoIP database
-
-      --json              Output logs in JSON format
-
-  -l, --level string      Log level
-                          Options: debug, info, warn, error, fatal, panic
-                          (default "info")
-
-      --no-aaaa           Do not resolve AAAA records for each test (no IPv6 testing)
-
-      --old-html          Deprecated, not recommended
-                          Recommended new way: Program outputs data JSON file first, follow prompts to view visual analysis
-                          Next time you need to view, directly open JSON file with the program
-                          This parameter uses the old way to output a single HTML file to the same directory as data JSON
-                          Can be opened by double-clicking
-
-  -o, --output string     Output file path for results
-                          Must be a file path relative to current program working directory
-                          If not specified, outputs to dnspy_result_<current time>.json in current working directory
-
-      --prefer-ipv4       Prefer IPv4 addresses when converting DNS server domain names to IP addresses
-                          (default true)
-
-  -s, --server strings    Manually specify server(s) to test, supports multiple
-
-  -w, --worker int        Number of DNS servers to test simultaneously
-                          (default 20)
-```
-
-## Compilation
-
-### Compilation Environment Requirements
-
-- You need `Go` environment and `curl` command on your computer
-- Preferably have `make` command, otherwise you may need to manually execute contents in `Makefile`
-- Ability to access GitHub to download resource files
-- If you encounter the following issue on Windows, please use `Git Bash` to execute commands instead
-
-```
-'GOOS' is not recognized as an internal or external command,
-operable program or batch file.
-```
-
-### Compilation Steps
-
-#### 1. Clone This Repository
-
-```bash
-git clone https://github.com/xxnuo/dns-benchmark.git
-cd dns-benchmark/dnspy
-```
-
-#### 2. Update Data Files (Optional)
-
-```bash
-make update
-```
-
-#### 3. Configure Dependencies
-
-```bash
-make configuration
-```
-
-#### 4. Build
-
-```bash
-make build
-```
-
-After compilation is complete, the generated executable file will be located in the current directory.
-
-## License
-
-This project is open source. Contributions and suggestions are welcome.
+本项目采用开源许可证，欢迎贡献代码和提出建议。
