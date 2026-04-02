@@ -12,6 +12,9 @@ import {
   Progress,
   Divider,
   Tooltip,
+  Tabs,
+  Tab,
+  ScrollShadow,
 } from "@nextui-org/react";
 import { Toaster, toast } from "sonner";
 import {
@@ -21,6 +24,7 @@ import {
   FaDownload as DownloadIcon,
   FaTrophy as TrophyIcon,
   FaClock as ClockIcon,
+  FaList as ListIcon,
 } from "react-icons/fa";
 import {
   MdSpeed as SpeedIcon,
@@ -50,9 +54,19 @@ export default function BenchmarkPanel({ onSwitchToAnalyze }) {
   const [partialResults, setPartialResults] = useState({});
   const [elapsedTime, setElapsedTime] = useState(0);
   const [startTime, setStartTime] = useState(null);
+  const [activityLog, setActivityLog] = useState([]);
+  const [resultsTab, setResultsTab] = useState("ranking");
 
   const eventSourceRef = useRef(null);
   const timerRef = useRef(null);
+  const activityEndRef = useRef(null);
+
+  // Auto-scroll activity log
+  useEffect(() => {
+    if (activityEndRef.current) {
+      activityEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [activityLog]);
 
   // Elapsed time counter
   useEffect(() => {
@@ -71,7 +85,6 @@ export default function BenchmarkPanel({ onSwitchToAnalyze }) {
     };
   }, [isRunning, startTime]);
 
-  // Format seconds to MM:SS
   const formatTime = (secs) => {
     const m = Math.floor(secs / 60);
     const s = secs % 60;
@@ -112,6 +125,16 @@ export default function BenchmarkPanel({ onSwitchToAnalyze }) {
                 ...prev,
                 [data.server]: data.result,
               }));
+              // Add to activity log
+              setActivityLog((prev) => [
+                ...prev,
+                {
+                  server: data.server,
+                  result: data.result,
+                  time: new Date().toLocaleTimeString(),
+                  index: data.completed,
+                },
+              ]);
             }
             break;
 
@@ -204,6 +227,7 @@ export default function BenchmarkPanel({ onSwitchToAnalyze }) {
       setCurrentServer("");
       setElapsedTime(0);
       setStartTime(Date.now());
+      setActivityLog([]);
 
       toast.success(t("gui.benchmark_started"), {
         description: t("gui.benchmark_started_desc", { total: data.total }),
@@ -242,7 +266,10 @@ export default function BenchmarkPanel({ onSwitchToAnalyze }) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `dnspy_result_${new Date().toISOString().slice(0, 19).replace(/[T:]/g, "-")}.json`;
+    a.download = `dnspy_result_${new Date()
+      .toISOString()
+      .slice(0, 19)
+      .replace(/[T:]/g, "-")}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -250,21 +277,29 @@ export default function BenchmarkPanel({ onSwitchToAnalyze }) {
   const progressPercent =
     total > 0 ? Math.round((completed / total) * 100) : 0;
 
-  // Compute aggregate stats from partial results
+  // Compute aggregate stats from partial results (using actual backend field names)
   const resultEntries = Object.entries(partialResults).filter(
     ([, r]) => r && r.score
   );
   const avgLatency =
     resultEntries.length > 0
       ? resultEntries.reduce(
-          (sum, [, r]) => sum + (r.statistics?.latencyAvgMs || 0),
+          (sum, [, r]) => sum + (r.latencyStats?.meanMs || 0),
           0
         ) / resultEntries.length
       : 0;
   const avgSuccessRate =
     resultEntries.length > 0
+      ? resultEntries.reduce((sum, [, r]) => {
+          const total = r.totalRequests || 1;
+          const success = r.totalSuccessResponses || 0;
+          return sum + (success / total) * 100;
+        }, 0) / resultEntries.length
+      : 0;
+  const avgQPS =
+    resultEntries.length > 0
       ? resultEntries.reduce(
-          (sum, [, r]) => sum + (r.statistics?.successRate || 0),
+          (sum, [, r]) => sum + (r.queriesPerSecond || 0),
           0
         ) / resultEntries.length
       : 0;
@@ -272,10 +307,13 @@ export default function BenchmarkPanel({ onSwitchToAnalyze }) {
   // Get top results sorted by score
   const topResults = resultEntries
     .filter(([, r]) => r.score && r.score.total > 0)
-    .sort((a, b) => (b[1].score?.total || 0) - (a[1].score?.total || 0))
-    .slice(0, 10);
+    .sort((a, b) => (b[1].score?.total || 0) - (a[1].score?.total || 0));
 
-  // Rank medal helper
+  // All results sorted by completion order (for the full results table)
+  const allResultsSorted = resultEntries.sort(
+    (a, b) => (b[1].score?.total || 0) - (a[1].score?.total || 0)
+  );
+
   const getRankDisplay = (index) => {
     if (index === 0) return "\u{1F947}";
     if (index === 1) return "\u{1F948}";
@@ -290,14 +328,21 @@ export default function BenchmarkPanel({ onSwitchToAnalyze }) {
     return "danger";
   };
 
+  const getLatencyColor = (ms) => {
+    if (ms < 50) return "text-green-500";
+    if (ms < 150) return "text-yellow-500";
+    if (ms < 300) return "text-orange-500";
+    return "text-red-500";
+  };
+
   const hasResults = Object.keys(partialResults).length > 0;
   const isDone = !isRunning && completed > 0;
 
   return (
-    <div className="p-4 md:p-6 flex flex-col gap-5 max-w-5xl mx-auto">
+    <div className="p-4 md:p-6 flex flex-col gap-5 max-w-6xl mx-auto">
       <Toaster position="top-center" expand={false} richColors />
 
-      {/* Header with gradient */}
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-400 text-white shadow-lg shadow-blue-500/25">
@@ -337,14 +382,13 @@ export default function BenchmarkPanel({ onSwitchToAnalyze }) {
         )}
       </div>
 
-      {/* Stats Cards - visible when running or done */}
+      {/* Stats Cards */}
       {(isRunning || hasResults) && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {/* Servers Tested */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <Card className="border-none bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20">
             <CardBody className="p-3">
               <div className="flex items-center gap-2">
-                <ServerIcon className="w-4 h-4 text-blue-500" />
+                <ServerIcon className="w-3.5 h-3.5 text-blue-500" />
                 <span className="text-xs text-default-500">
                   {t("gui.servers_tested")}
                 </span>
@@ -358,27 +402,27 @@ export default function BenchmarkPanel({ onSwitchToAnalyze }) {
             </CardBody>
           </Card>
 
-          {/* Avg Latency */}
           <Card className="border-none bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20">
             <CardBody className="p-3">
               <div className="flex items-center gap-2">
-                <TimelapseIcon className="w-4 h-4 text-green-500" />
+                <TimelapseIcon className="w-3.5 h-3.5 text-green-500" />
                 <span className="text-xs text-default-500">
                   {t("gui.avg_latency")}
                 </span>
               </div>
               <p className="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">
-                {avgLatency > 0 ? avgLatency.toFixed(1) : "\u2014"}
-                <span className="text-sm font-normal text-default-400">ms</span>
+                {avgLatency > 0 ? avgLatency.toFixed(0) : "\u2014"}
+                <span className="text-sm font-normal text-default-400">
+                  ms
+                </span>
               </p>
             </CardBody>
           </Card>
 
-          {/* Avg Success Rate */}
           <Card className="border-none bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20">
             <CardBody className="p-3">
               <div className="flex items-center gap-2">
-                <CheckCircleIcon className="w-4 h-4 text-purple-500" />
+                <CheckCircleIcon className="w-3.5 h-3.5 text-purple-500" />
                 <span className="text-xs text-default-500">
                   {t("gui.avg_success")}
                 </span>
@@ -390,11 +434,27 @@ export default function BenchmarkPanel({ onSwitchToAnalyze }) {
             </CardBody>
           </Card>
 
-          {/* Elapsed Time */}
+          <Card className="border-none bg-gradient-to-br from-cyan-50 to-cyan-100 dark:from-cyan-900/20 dark:to-cyan-800/20">
+            <CardBody className="p-3">
+              <div className="flex items-center gap-2">
+                <SpeedIcon className="w-3.5 h-3.5 text-cyan-500" />
+                <span className="text-xs text-default-500">
+                  {t("gui.avg_qps")}
+                </span>
+              </div>
+              <p className="text-2xl font-bold text-cyan-600 dark:text-cyan-400 mt-1">
+                {avgQPS > 0 ? avgQPS.toFixed(0) : "\u2014"}
+                <span className="text-sm font-normal text-default-400">
+                  /s
+                </span>
+              </p>
+            </CardBody>
+          </Card>
+
           <Card className="border-none bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20">
             <CardBody className="p-3">
               <div className="flex items-center gap-2">
-                <ClockIcon className="w-4 h-4 text-orange-500" />
+                <ClockIcon className="w-3.5 h-3.5 text-orange-500" />
                 <span className="text-xs text-default-500">
                   {t("gui.elapsed_time")}
                 </span>
@@ -407,7 +467,7 @@ export default function BenchmarkPanel({ onSwitchToAnalyze }) {
         </div>
       )}
 
-      {/* Progress Bar - when running */}
+      {/* Progress Bar */}
       {isRunning && (
         <Card className="border-none shadow-md">
           <CardBody className="p-4">
@@ -440,7 +500,13 @@ export default function BenchmarkPanel({ onSwitchToAnalyze }) {
               )}
               {total > 0 && completed > 0 && (
                 <span className="text-xs text-default-400">
-                  ~{formatTime(Math.round(((elapsedTime / completed) * (total - completed))))} {t("gui.remaining")}
+                  ~
+                  {formatTime(
+                    Math.round(
+                      (elapsedTime / completed) * (total - completed)
+                    )
+                  )}{" "}
+                  {t("gui.remaining")}
                 </span>
               )}
             </div>
@@ -457,11 +523,9 @@ export default function BenchmarkPanel({ onSwitchToAnalyze }) {
                 <div className="p-2 rounded-full bg-green-100 dark:bg-green-900/40">
                   <CheckCircleIcon className="w-5 h-5 text-green-600 dark:text-green-400" />
                 </div>
-                <div>
-                  <p className="font-semibold text-green-700 dark:text-green-300">
-                    {t("gui.benchmark_done", { count: completed })}
-                  </p>
-                </div>
+                <p className="font-semibold text-green-700 dark:text-green-300">
+                  {t("gui.benchmark_done", { count: completed })}
+                </p>
               </div>
               {onSwitchToAnalyze && (
                 <Button
@@ -480,7 +544,7 @@ export default function BenchmarkPanel({ onSwitchToAnalyze }) {
 
       <div className="flex flex-col lg:flex-row gap-4">
         {/* Configuration Panel */}
-        <Card className="lg:w-[380px] flex-shrink-0 shadow-md">
+        <Card className="lg:w-[360px] flex-shrink-0 shadow-md">
           <CardHeader className="pb-2">
             <div className="flex items-center gap-2">
               <ServerIcon className="w-4 h-4 text-primary" />
@@ -488,7 +552,6 @@ export default function BenchmarkPanel({ onSwitchToAnalyze }) {
             </div>
           </CardHeader>
           <CardBody className="flex flex-col gap-4 pt-0">
-            {/* Use Built-in Servers */}
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium">
@@ -506,7 +569,6 @@ export default function BenchmarkPanel({ onSwitchToAnalyze }) {
               />
             </div>
 
-            {/* Custom Servers */}
             <Textarea
               label={t("gui.custom_servers")}
               placeholder={t("gui.custom_servers_placeholder")}
@@ -521,7 +583,6 @@ export default function BenchmarkPanel({ onSwitchToAnalyze }) {
 
             <Divider />
 
-            {/* Test Parameters */}
             <div className="flex flex-col gap-3">
               <Slider
                 label={t("gui.duration")}
@@ -541,7 +602,6 @@ export default function BenchmarkPanel({ onSwitchToAnalyze }) {
                   { value: 60, label: "60s" },
                 ]}
               />
-
               <Slider
                 label={t("gui.concurrency")}
                 step={1}
@@ -559,7 +619,6 @@ export default function BenchmarkPanel({ onSwitchToAnalyze }) {
                   { value: 50, label: "50" },
                 ]}
               />
-
               <Slider
                 label={t("gui.workers")}
                 step={1}
@@ -577,7 +636,6 @@ export default function BenchmarkPanel({ onSwitchToAnalyze }) {
                   { value: 50, label: "50" },
                 ]}
               />
-
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium">{t("gui.no_aaaa")}</p>
@@ -596,7 +654,6 @@ export default function BenchmarkPanel({ onSwitchToAnalyze }) {
 
             <Divider />
 
-            {/* Action Buttons */}
             <div className="flex gap-2">
               {!isRunning ? (
                 <Button
@@ -625,111 +682,386 @@ export default function BenchmarkPanel({ onSwitchToAnalyze }) {
           </CardBody>
         </Card>
 
-        {/* Live Results Panel */}
+        {/* Results Panel - Tabs: Ranking / Live Feed / All Results */}
         <Card className="flex-1 shadow-md">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between w-full">
-              <div className="flex items-center gap-2">
-                <TrophyIcon className="w-4 h-4 text-amber-500" />
-                <span className="font-semibold">{t("gui.top_results")}</span>
-              </div>
-              {topResults.length > 0 && (
-                <Chip size="sm" variant="flat" color="default">
-                  {topResults.length} {t("gui.servers_shown")}
-                </Chip>
-              )}
-            </div>
+          <CardHeader className="pb-0">
+            <Tabs
+              selectedKey={resultsTab}
+              onSelectionChange={(key) => setResultsTab(String(key))}
+              variant="underlined"
+              color="primary"
+              size="sm"
+            >
+              <Tab
+                key="ranking"
+                title={
+                  <div className="flex items-center gap-1.5">
+                    <TrophyIcon className="w-3.5 h-3.5" />
+                    <span>{t("gui.top_results")}</span>
+                    {topResults.length > 0 && (
+                      <Chip size="sm" variant="flat" className="h-5 min-w-0">
+                        {topResults.length}
+                      </Chip>
+                    )}
+                  </div>
+                }
+              />
+              <Tab
+                key="live"
+                title={
+                  <div className="flex items-center gap-1.5">
+                    <div
+                      className={`w-2 h-2 rounded-full ${
+                        isRunning ? "bg-green-500 animate-pulse" : "bg-default-300"
+                      }`}
+                    />
+                    <span>{t("gui.live_feed")}</span>
+                    {activityLog.length > 0 && (
+                      <Chip size="sm" variant="flat" className="h-5 min-w-0">
+                        {activityLog.length}
+                      </Chip>
+                    )}
+                  </div>
+                }
+              />
+              <Tab
+                key="all"
+                title={
+                  <div className="flex items-center gap-1.5">
+                    <ListIcon className="w-3.5 h-3.5" />
+                    <span>{t("gui.all_results")}</span>
+                    {allResultsSorted.length > 0 && (
+                      <Chip size="sm" variant="flat" className="h-5 min-w-0">
+                        {allResultsSorted.length}
+                      </Chip>
+                    )}
+                  </div>
+                }
+              />
+            </Tabs>
           </CardHeader>
-          <CardBody className="pt-0">
-            {topResults.length > 0 ? (
-              <div className="flex flex-col gap-2">
-                {topResults.map(([server, result], index) => (
-                  <div
-                    key={server}
-                    className={`flex items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-200 ${
-                      index === 0
-                        ? "bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 border border-amber-200/50 dark:border-amber-700/30"
-                        : index === 1
-                        ? "bg-gradient-to-r from-slate-50 to-gray-50 dark:from-slate-900/20 dark:to-gray-900/20 border border-slate-200/50 dark:border-slate-700/30"
-                        : index === 2
-                        ? "bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 border border-orange-200/50 dark:border-orange-700/30"
-                        : "bg-default-50 hover:bg-default-100 border border-transparent"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <span
-                        className={`text-base w-7 text-center ${
-                          index < 3 ? "text-lg" : "text-xs font-bold text-default-400"
-                        }`}
-                      >
-                        {getRankDisplay(index)}
-                      </span>
-                      <div className="min-w-0">
-                        <Tooltip content={server}>
-                          <span className="text-sm font-medium truncate block max-w-[180px]">
-                            {server}
-                          </span>
-                        </Tooltip>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          {result.geocode && (
+          <CardBody className="pt-2">
+            {/* Ranking Tab */}
+            {resultsTab === "ranking" && (
+              <>
+                {topResults.length > 0 ? (
+                  <ScrollShadow className="max-h-[500px]">
+                    <div className="flex flex-col gap-2">
+                      {topResults.slice(0, 15).map(([server, result], index) => (
+                        <div
+                          key={server}
+                          className={`flex items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-200 ${
+                            index === 0
+                              ? "bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 border border-amber-200/50 dark:border-amber-700/30"
+                              : index === 1
+                              ? "bg-gradient-to-r from-slate-50 to-gray-50 dark:from-slate-900/20 dark:to-gray-900/20 border border-slate-200/50 dark:border-slate-700/30"
+                              : index === 2
+                              ? "bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 border border-orange-200/50 dark:border-orange-700/30"
+                              : "bg-default-50 hover:bg-default-100 border border-transparent"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                            <span
+                              className={`w-7 text-center ${
+                                index < 3
+                                  ? "text-lg"
+                                  : "text-xs font-bold text-default-400"
+                              }`}
+                            >
+                              {getRankDisplay(index)}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <Tooltip content={server}>
+                                <span className="text-sm font-medium truncate block max-w-[160px]">
+                                  {server}
+                                </span>
+                              </Tooltip>
+                              <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                                {result.geocode && (
+                                  <Chip
+                                    size="sm"
+                                    variant="flat"
+                                    className="h-4 text-tiny"
+                                  >
+                                    {result.geocode}
+                                  </Chip>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3 flex-shrink-0">
+                            <div className="hidden sm:flex flex-col items-end gap-0.5">
+                              <span
+                                className={`text-xs font-medium ${getLatencyColor(
+                                  result.latencyStats?.meanMs || 0
+                                )}`}
+                              >
+                                {result.latencyStats?.meanMs || 0}ms
+                              </span>
+                              <span className="text-tiny text-default-400">
+                                {(result.queriesPerSecond || 0).toFixed(0)} QPS
+                              </span>
+                            </div>
+                            <div className="hidden md:block w-14">
+                              <div className="h-1.5 rounded-full bg-default-200 overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full transition-all ${
+                                    (result.latencyStats?.meanMs || 0) < 50
+                                      ? "bg-green-500"
+                                      : (result.latencyStats?.meanMs || 0) < 150
+                                      ? "bg-yellow-500"
+                                      : "bg-red-500"
+                                  }`}
+                                  style={{
+                                    width: `${Math.min(
+                                      100,
+                                      Math.max(
+                                        5,
+                                        100 -
+                                          (result.latencyStats?.meanMs || 0) / 5
+                                      )
+                                    )}%`,
+                                  }}
+                                />
+                              </div>
+                            </div>
                             <Chip
                               size="sm"
+                              color={getScoreColor(result.score?.total || 0)}
                               variant="flat"
-                              className="h-4 text-tiny"
+                              className="font-bold min-w-[52px] text-center"
                             >
-                              {result.geocode}
+                              {(result.score?.total || 0).toFixed(1)}
                             </Chip>
-                          )}
-                          {result.statistics?.latencyAvgMs != null && (
-                            <span className="text-tiny text-default-400">
-                              {result.statistics.latencyAvgMs.toFixed(1)}ms
-                            </span>
-                          )}
+                          </div>
                         </div>
-                      </div>
+                      ))}
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      {/* Mini latency bar */}
-                      <div className="hidden md:block w-16">
-                        <div className="h-1.5 rounded-full bg-default-200 overflow-hidden">
-                          <div
-                            className={`h-full rounded-full transition-all ${
-                              (result.statistics?.latencyAvgMs || 0) < 50
-                                ? "bg-green-500"
-                                : (result.statistics?.latencyAvgMs || 0) < 150
-                                ? "bg-yellow-500"
-                                : "bg-red-500"
-                            }`}
-                            style={{
-                              width: `${Math.min(100, Math.max(5, 100 - (result.statistics?.latencyAvgMs || 0) / 5))}%`,
-                            }}
-                          />
-                        </div>
-                      </div>
-                      <Chip
-                        size="sm"
-                        color={getScoreColor(result.score?.total || 0)}
-                        variant="flat"
-                        className="font-bold min-w-[52px] text-center"
-                      >
-                        {(result.score?.total || 0).toFixed(1)}
-                      </Chip>
+                  </ScrollShadow>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <div className="p-4 rounded-full bg-default-100 mb-4">
+                      <SpeedIcon className="w-8 h-8 text-default-300" />
                     </div>
+                    <p className="text-default-400 font-medium">
+                      {t("gui.not_running")}
+                    </p>
+                    <p className="text-xs text-default-300 mt-1">
+                      {t("gui.not_running_hint")}
+                    </p>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <div className="p-4 rounded-full bg-default-100 mb-4">
-                  <SpeedIcon className="w-8 h-8 text-default-300" />
-                </div>
-                <p className="text-default-400 font-medium">
-                  {t("gui.not_running")}
-                </p>
-                <p className="text-xs text-default-300 mt-1">
-                  {t("gui.not_running_hint")}
-                </p>
-              </div>
+                )}
+              </>
+            )}
+
+            {/* Live Feed Tab */}
+            {resultsTab === "live" && (
+              <>
+                {activityLog.length > 0 ? (
+                  <ScrollShadow className="max-h-[500px]">
+                    <div className="flex flex-col gap-1">
+                      {activityLog.map((entry, i) => {
+                        const r = entry.result;
+                        const successRate =
+                          r.totalRequests > 0
+                            ? (
+                                (r.totalSuccessResponses / r.totalRequests) *
+                                100
+                              ).toFixed(1)
+                            : "0.0";
+                        return (
+                          <div
+                            key={i}
+                            className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-300 ${
+                              i === activityLog.length - 1 && isRunning
+                                ? "bg-primary-50 dark:bg-primary-900/20 border border-primary-200/50 dark:border-primary-700/30"
+                                : "bg-default-50 hover:bg-default-100"
+                            }`}
+                          >
+                            <span className="text-tiny text-default-400 w-6 text-right flex-shrink-0">
+                              {entry.index}
+                            </span>
+                            <div
+                              className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+                                (r.score?.total || 0) >= 60
+                                  ? "bg-green-500"
+                                  : (r.score?.total || 0) >= 30
+                                  ? "bg-yellow-500"
+                                  : "bg-red-500"
+                              }`}
+                            />
+                            <div className="min-w-0 flex-1">
+                              <Tooltip content={entry.server}>
+                                <span className="text-sm truncate block max-w-[180px]">
+                                  {entry.server}
+                                </span>
+                              </Tooltip>
+                            </div>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              {r.geocode && (
+                                <Chip
+                                  size="sm"
+                                  variant="flat"
+                                  className="h-4 text-tiny hidden sm:flex"
+                                >
+                                  {r.geocode}
+                                </Chip>
+                              )}
+                              <span
+                                className={`text-xs font-medium w-12 text-right ${getLatencyColor(
+                                  r.latencyStats?.meanMs || 0
+                                )}`}
+                              >
+                                {r.latencyStats?.meanMs || 0}ms
+                              </span>
+                              <span className="text-xs text-default-400 w-10 text-right hidden sm:block">
+                                {successRate}%
+                              </span>
+                              <Chip
+                                size="sm"
+                                color={getScoreColor(r.score?.total || 0)}
+                                variant="flat"
+                                className="font-bold min-w-[44px] text-center"
+                              >
+                                {(r.score?.total || 0).toFixed(1)}
+                              </Chip>
+                              <span className="text-tiny text-default-300 w-14 text-right hidden md:block">
+                                {entry.time}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      <div ref={activityEndRef} />
+                    </div>
+                  </ScrollShadow>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <div className="p-4 rounded-full bg-default-100 mb-4">
+                      <TimelapseIcon className="w-8 h-8 text-default-300" />
+                    </div>
+                    <p className="text-default-400 font-medium">
+                      {t("gui.live_feed_empty")}
+                    </p>
+                    <p className="text-xs text-default-300 mt-1">
+                      {t("gui.live_feed_hint")}
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* All Results Tab */}
+            {resultsTab === "all" && (
+              <>
+                {allResultsSorted.length > 0 ? (
+                  <ScrollShadow className="max-h-[500px]">
+                    {/* Table header */}
+                    <div className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-default-500 border-b border-default-200 sticky top-0 bg-content1 z-10">
+                      <span className="w-7 text-center">#</span>
+                      <span className="flex-1">{t("gui.col_server")}</span>
+                      <span className="w-12 text-right hidden sm:block">
+                        {t("gui.col_region")}
+                      </span>
+                      <span className="w-14 text-right">
+                        {t("gui.col_latency")}
+                      </span>
+                      <span className="w-12 text-right hidden sm:block">
+                        QPS
+                      </span>
+                      <span className="w-14 text-right hidden sm:block">
+                        {t("gui.col_success")}
+                      </span>
+                      <span className="w-14 text-right">
+                        {t("gui.col_score")}
+                      </span>
+                    </div>
+                    <div className="flex flex-col">
+                      {allResultsSorted.map(([server, result], index) => {
+                        const successRate =
+                          result.totalRequests > 0
+                            ? (
+                                (result.totalSuccessResponses /
+                                  result.totalRequests) *
+                                100
+                              ).toFixed(1)
+                            : "0.0";
+                        return (
+                          <div
+                            key={server}
+                            className="flex items-center gap-2 px-3 py-2 hover:bg-default-50 border-b border-default-100 transition-colors"
+                          >
+                            <span
+                              className={`w-7 text-center ${
+                                index < 3
+                                  ? "text-base"
+                                  : "text-xs text-default-400"
+                              }`}
+                            >
+                              {getRankDisplay(index)}
+                            </span>
+                            <div className="flex-1 min-w-0">
+                              <Tooltip content={server}>
+                                <span className="text-sm truncate block max-w-[180px]">
+                                  {server}
+                                </span>
+                              </Tooltip>
+                            </div>
+                            <span className="w-12 text-right hidden sm:block">
+                              {result.geocode && (
+                                <Chip
+                                  size="sm"
+                                  variant="flat"
+                                  className="h-4 text-tiny"
+                                >
+                                  {result.geocode}
+                                </Chip>
+                              )}
+                            </span>
+                            <span
+                              className={`w-14 text-right text-xs font-medium ${getLatencyColor(
+                                result.latencyStats?.meanMs || 0
+                              )}`}
+                            >
+                              {result.latencyStats?.meanMs || 0}ms
+                            </span>
+                            <span className="w-12 text-right text-xs text-default-500 hidden sm:block">
+                              {(result.queriesPerSecond || 0).toFixed(0)}
+                            </span>
+                            <span className="w-14 text-right text-xs text-default-500 hidden sm:block">
+                              {successRate}%
+                            </span>
+                            <div className="w-14 flex justify-end">
+                              <Chip
+                                size="sm"
+                                color={getScoreColor(
+                                  result.score?.total || 0
+                                )}
+                                variant="flat"
+                                className="font-bold min-w-[44px] text-center"
+                              >
+                                {(result.score?.total || 0).toFixed(1)}
+                              </Chip>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </ScrollShadow>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <div className="p-4 rounded-full bg-default-100 mb-4">
+                      <ListIcon className="w-8 h-8 text-default-300" />
+                    </div>
+                    <p className="text-default-400 font-medium">
+                      {t("gui.no_results")}
+                    </p>
+                    <p className="text-xs text-default-300 mt-1">
+                      {t("gui.no_results_hint")}
+                    </p>
+                  </div>
+                )}
+              </>
             )}
           </CardBody>
         </Card>
