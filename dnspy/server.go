@@ -280,7 +280,6 @@ func (s *GuiServer) runBenchmark(ctx context.Context, servers []string, req benc
 	randomNum := Round(rand.New(rand.NewSource(time.Now().UnixNano())).Float64(), 2)
 
 	var wg sync.WaitGroup
-	var mu sync.Mutex
 	semaphore := make(chan struct{}, req.Workers)
 
 	for _, server := range servers {
@@ -314,14 +313,12 @@ func (s *GuiServer) runBenchmark(ctx context.Context, servers []string, req benc
 			output := runDnspyre(GeoDB, Cfg.PreferIPv4, req.NoAAAA,
 				DnspyreBinPath, srv, DomainsBinPath, req.Duration, req.Concurrency, randomNum)
 
-			mu.Lock()
 			s.mu.Lock()
 			s.results[srv] = output
 			s.completed++
 			completed := s.completed
 			total := s.total
 			s.mu.Unlock()
-			mu.Unlock()
 
 			s.broadcast(sseEvent{
 				Type:      "progress",
