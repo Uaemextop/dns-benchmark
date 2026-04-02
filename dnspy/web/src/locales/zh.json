@@ -69,9 +69,13 @@
     "start_benchmark": "开始测试",
     "stop_benchmark": "停止测试",
     "progress": "测试进度",
-    "servers_tested": "个服务器已测试",
+    "servers_tested": "已测试服务器",
+    "servers_shown": "个服务器",
     "testing": "正在测试",
-    "not_running": "配置参数并开始测试",
+    "running": "测试进行中",
+    "remaining": "剩余",
+    "not_running": "暂无测试结果",
+    "not_running_hint": "在左侧配置参数并开始测试",
     "benchmark_done": "测试完成！已测试 {{count}} 个服务器。切换到数据分析标签查看结果。",
     "top_results": "实时排名",
     "benchmark_started": "测试已开始",
@@ -79,6 +83,12 @@
     "benchmark_complete": "测试完成！",
     "benchmark_complete_desc": "结果已就绪。切换到数据分析标签查看详情。",
     "benchmark_error": "测试出错",
-    "benchmark_stopping": "正在停止测试..."
+    "benchmark_stopping": "正在停止测试...",
+    "export": "导出",
+    "export_results": "下载 JSON 结果文件",
+    "view_analysis": "查看分析",
+    "avg_latency": "平均延迟",
+    "avg_success": "平均成功率",
+    "elapsed_time": "已用时间"
   }
 }

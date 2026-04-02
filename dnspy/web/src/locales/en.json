@@ -69,9 +69,13 @@
     "start_benchmark": "Start Benchmark",
     "stop_benchmark": "Stop Benchmark",
     "progress": "Progress",
-    "servers_tested": "servers tested",
+    "servers_tested": "Servers Tested",
+    "servers_shown": "servers",
     "testing": "Currently testing",
-    "not_running": "Configure and start a benchmark to see results",
+    "running": "Benchmark running",
+    "remaining": "remaining",
+    "not_running": "No benchmark results yet",
+    "not_running_hint": "Configure parameters on the left and start a benchmark",
     "benchmark_done": "Benchmark complete! {{count}} servers tested. Switch to the Analyze tab to explore results.",
     "top_results": "Top Results (Live)",
     "benchmark_started": "Benchmark started",
@@ -79,6 +83,12 @@
     "benchmark_complete": "Benchmark complete!",
     "benchmark_complete_desc": "Results are ready. Switch to Analyze tab to explore.",
     "benchmark_error": "Benchmark error",
-    "benchmark_stopping": "Stopping benchmark..."
+    "benchmark_stopping": "Stopping benchmark...",
+    "export": "Export",
+    "export_results": "Download results as JSON file",
+    "view_analysis": "View Analysis",
+    "avg_latency": "Avg Latency",
+    "avg_success": "Avg Success Rate",
+    "elapsed_time": "Elapsed Time"
   }
 }

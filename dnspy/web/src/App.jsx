@@ -24,6 +24,8 @@ const App = () => {
       });
   }, []);
 
+  const handleSwitchToAnalyze = () => setActiveTab("analyze");
+
   return (
     <div id="app">
       <FileProvider>
@@ -33,7 +35,7 @@ const App = () => {
           onTabChange={setActiveTab}
         />
         {activeTab === "benchmark" && isGuiMode ? (
-          <BenchmarkPanel />
+          <BenchmarkPanel onSwitchToAnalyze={handleSwitchToAnalyze} />
         ) : (
           <Analyze />
         )}
