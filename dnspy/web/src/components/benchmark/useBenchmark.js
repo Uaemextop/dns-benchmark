@@ -3,6 +3,13 @@ import { toast } from "sonner";
 import { useFile } from "../../contexts/FileContext";
 import { useSSE } from "./useSSE";
 import { useElapsedTimer } from "./useElapsedTimer";
+import { startBenchmark, stopBenchmark } from "../../services/api";
+import {
+  LOCAL_STORAGE_KEY,
+  DEFAULT_DURATION,
+  DEFAULT_CONCURRENCY,
+  DEFAULT_WORKERS,
+} from "../../constants";
 
 /**
  * Central hook managing benchmark state, SSE, start/stop actions.
@@ -14,10 +21,10 @@ export function useBenchmark(t) {
   // Config state
   const [servers, setServers] = useState("");
   const [useBuiltin, setUseBuiltin] = useState(true);
-  const [duration, setDuration] = useState(10);
+  const [duration, setDuration] = useState(DEFAULT_DURATION);
   const [isUnlimited, setIsUnlimited] = useState(false);
-  const [concurrency, setConcurrency] = useState(10);
-  const [workers, setWorkers] = useState(20);
+  const [concurrency, setConcurrency] = useState(DEFAULT_CONCURRENCY);
+  const [workers, setWorkers] = useState(DEFAULT_WORKERS);
   const [noAAAA, setNoAAAA] = useState(false);
 
   // Benchmark run state
@@ -70,7 +77,7 @@ export function useBenchmark(t) {
       setCurrentServer("");
       if (data.results) {
         setJsonData(data.results);
-        localStorage.setItem("dnsAnalyzerData", JSON.stringify(data.results));
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data.results));
         toast.success(t("gui.benchmark_complete"), {
           description: t("gui.benchmark_complete_desc"),
           duration: 5000,
@@ -99,7 +106,7 @@ export function useBenchmark(t) {
       setCurrentServer("");
       if (data.results && Object.keys(data.results).length > 0) {
         setJsonData(data.results);
-        localStorage.setItem("dnsAnalyzerData", JSON.stringify(data.results));
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data.results));
         toast.success(t("gui.benchmark_stopped_saved"), {
           description: t("gui.benchmark_stopped_saved_desc", {
             count: Object.keys(data.results).length,
@@ -142,23 +149,8 @@ export function useBenchmark(t) {
         noAAAA,
       };
 
-      const res = await fetch("/api/benchmark/start", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+      const data = await startBenchmark(body);
 
-      if (!res.ok) {
-        const err = await res.json();
-        toast.error(t("gui.benchmark_error"), {
-          description: err.error || "Failed to start benchmark",
-          duration: 5000,
-          className: "dark:text-neutral-200",
-        });
-        return;
-      }
-
-      const data = await res.json();
       setIsRunning(true);
       setCompleted(0);
       setTotal(data.total || 0);
@@ -196,14 +188,12 @@ export function useBenchmark(t) {
 
   const handleStop = useCallback(async () => {
     try {
-      const res = await fetch("/api/benchmark/stop", { method: "POST" });
-      if (res.ok) {
-        setIsRunning(false);
-        toast.info(t("gui.benchmark_stopped"), {
-          duration: 2000,
-          className: "dark:text-neutral-200",
-        });
-      }
+      await stopBenchmark();
+      setIsRunning(false);
+      toast.info(t("gui.benchmark_stopped"), {
+        duration: 2000,
+        className: "dark:text-neutral-200",
+      });
     } catch (err) {
       console.error("Stop error:", err);
     }

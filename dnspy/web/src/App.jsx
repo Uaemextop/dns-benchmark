@@ -3,7 +3,10 @@ import "./App.css";
 import Analyze from "./components/Analyze";
 import BenchmarkPanel from "./components/BenchmarkPanel";
 import NavBar from "./components/NavBar";
+import Footer from "./components/Footer";
+import ErrorBoundary from "./components/ErrorBoundary";
 import { FileProvider } from "./contexts/FileContext";
+import { fetchServers } from "./services/api";
 
 const App = () => {
   const [isGuiMode, setIsGuiMode] = useState(false);
@@ -11,12 +14,10 @@ const App = () => {
 
   useEffect(() => {
     // Detect GUI mode by checking if the API is available
-    fetch("/api/servers")
-      .then((res) => {
-        if (res.ok) {
-          setIsGuiMode(true);
-          setActiveTab("benchmark");
-        }
+    fetchServers()
+      .then(() => {
+        setIsGuiMode(true);
+        setActiveTab("benchmark");
       })
       .catch(() => {
         setIsGuiMode(false);
@@ -34,11 +35,14 @@ const App = () => {
           activeTab={activeTab}
           onTabChange={setActiveTab}
         />
-        {activeTab === "benchmark" && isGuiMode ? (
-          <BenchmarkPanel onSwitchToAnalyze={handleSwitchToAnalyze} />
-        ) : (
-          <Analyze />
-        )}
+        <ErrorBoundary>
+          {activeTab === "benchmark" && isGuiMode ? (
+            <BenchmarkPanel onSwitchToAnalyze={handleSwitchToAnalyze} />
+          ) : (
+            <Analyze />
+          )}
+        </ErrorBoundary>
+        <Footer />
       </FileProvider>
     </div>
   );

@@ -1,14 +1,28 @@
 import { useTranslation } from "react-i18next";
 import { ScrollShadow, Tooltip, Chip } from "@nextui-org/react";
 import { MdSpeed as SpeedIcon } from "react-icons/md";
-import { FaChartBar as ChartIcon } from "react-icons/fa";
+import { FaChartBar as ChartIcon, FaCopy as CopyIcon } from "react-icons/fa";
+import { toast } from "sonner";
 import { getRankDisplay, getScoreColor, getLatencyColor, countryCodeToFlag } from "./utils";
 
 /**
  * Ranking tab — top servers sorted by score with improved visual design.
+ * Supports click-to-view-details and right-click/long-press to copy address.
  */
 export default function RankingTab({ topResults, onServerClick }) {
   const { t } = useTranslation();
+
+  const handleCopy = (e, server) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(server).then(() => {
+      toast.success(t("tip.copied"), {
+        description: server,
+        duration: 2000,
+      });
+    }).catch(() => {
+      toast.error(t("tip.copy_failed"));
+    });
+  };
 
   if (topResults.length === 0) {
     return (
@@ -134,6 +148,15 @@ export default function RankingTab({ topResults, onServerClick }) {
                 >
                   {score.toFixed(1)}
                 </Chip>
+                <Tooltip content={t("tip.copied")}>
+                  <button
+                    onClick={(e) => handleCopy(e, server)}
+                    className="p-1 rounded-md hover:bg-default-200 transition-colors"
+                    aria-label="Copy server address"
+                  >
+                    <CopyIcon className="w-3 h-3 text-default-400 hover:text-default-600" />
+                  </button>
+                </Tooltip>
                 <ChartIcon className="w-3.5 h-3.5 text-default-300" />
               </div>
             </div>

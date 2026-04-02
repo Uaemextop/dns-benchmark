@@ -45,6 +45,59 @@ type benchmarkRequest struct {
 	NoAAAA      bool     `json:"noAAAA"`
 }
 
+// applyDefaults normalises a benchmarkRequest, filling in zero/negative values
+// with sensible defaults.
+func (req *benchmarkRequest) applyDefaults() {
+	if req.Duration < 0 {
+		req.Duration = 0
+	}
+	if req.Duration == 0 {
+		// "Unlimited" mode: use a very large duration that will effectively run
+		// until stopped. 24 hours is long enough for any practical test.
+		req.Duration = 86400
+	}
+	if req.Concurrency <= 0 {
+		req.Concurrency = 10
+	}
+	if req.Workers <= 0 {
+		req.Workers = 20
+	}
+}
+
+// resolveServers determines the final server list for a benchmark run by
+// combining user-provided servers with the built-in list (when requested).
+func (s *GuiServer) resolveServers(req benchmarkRequest) ([]string, error) {
+	var servers []string
+	if len(req.Servers) > 0 {
+		servers = req.Servers
+	}
+	if req.UseBuiltin || len(servers) == 0 {
+		serversData, err := GetSampleServersData()
+		if err != nil {
+			return nil, fmt.Errorf("cannot load built-in server list: %w", err)
+		}
+		builtinServers, err := FormatListData(&serversData)
+		if err != nil {
+			return nil, fmt.Errorf("cannot parse built-in server list: %w", err)
+		}
+		if len(req.Servers) > 0 {
+			// Merge: user-specified plus built-in (deduplicate).
+			seen := make(map[string]struct{}, len(servers))
+			for _, sv := range servers {
+				seen[sv] = struct{}{}
+			}
+			for _, sv := range builtinServers {
+				if _, ok := seen[sv]; !ok {
+					servers = append(servers, sv)
+				}
+			}
+		} else {
+			servers = builtinServers
+		}
+	}
+	return servers, nil
+}
+
 // GuiServer manages the HTTP server, benchmark state, and SSE clients.
 type GuiServer struct {
 	port int
@@ -110,6 +163,7 @@ func (s *GuiServer) broadcast(evt sseEvent) {
 }
 
 // setCORS adds CORS headers for development convenience.
+// Deprecated: use corsMiddleware instead. Kept temporarily for any direct callers.
 func setCORS(w http.ResponseWriter) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
@@ -160,106 +214,53 @@ func (s *GuiServer) initResources() error {
 
 // handleServers returns the list of available DNS servers.
 func (s *GuiServer) handleServers(w http.ResponseWriter, r *http.Request) {
-	setCORS(w)
-	if r.Method == http.MethodOptions {
-		w.WriteHeader(http.StatusNoContent)
-		return
-	}
-
 	serversData, err := GetSampleServersData()
 	if err != nil {
-		http.Error(w, `{"error":"cannot load server list"}`, http.StatusInternalServerError)
+		jsonError(w, "cannot load server list", http.StatusInternalServerError)
 		return
 	}
 	servers, err := FormatListData(&serversData)
 	if err != nil {
-		http.Error(w, `{"error":"cannot parse server list"}`, http.StatusInternalServerError)
+		jsonError(w, "cannot parse server list", http.StatusInternalServerError)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(servers)
+	jsonOK(w, servers)
 }
 
 // handleBenchmarkStart starts a new benchmark run.
 func (s *GuiServer) handleBenchmarkStart(w http.ResponseWriter, r *http.Request) {
-	setCORS(w)
-	if r.Method == http.MethodOptions {
-		w.WriteHeader(http.StatusNoContent)
-		return
-	}
-	if r.Method != http.MethodPost {
-		http.Error(w, `{"error":"method not allowed"}`, http.StatusMethodNotAllowed)
+	if !requirePOST(w, r) {
 		return
 	}
 
 	s.mu.Lock()
 	if s.state == stateRunning {
 		s.mu.Unlock()
-		http.Error(w, `{"error":"benchmark already running"}`, http.StatusConflict)
+		jsonError(w, "benchmark already running", http.StatusConflict)
 		return
 	}
 
 	var req benchmarkRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		s.mu.Unlock()
-		http.Error(w, `{"error":"invalid request body"}`, http.StatusBadRequest)
+		jsonError(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
 
 	// Apply defaults.
-	if req.Duration < 0 {
-		req.Duration = 0
-	}
-	if req.Duration == 0 {
-		// "Unlimited" mode: use a very large duration that will effectively run
-		// until stopped. 24 hours is long enough for any practical test.
-		req.Duration = 86400
-	}
-	if req.Concurrency <= 0 {
-		req.Concurrency = 10
-	}
-	if req.Workers <= 0 {
-		req.Workers = 20
-	}
+	req.applyDefaults()
 
 	// Determine the server list.
-	var servers []string
-	if len(req.Servers) > 0 {
-		servers = req.Servers
+	servers, err := s.resolveServers(req)
+	if err != nil {
+		s.mu.Unlock()
+		jsonError(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
-	if req.UseBuiltin || len(servers) == 0 {
-		serversData, err := GetSampleServersData()
-		if err != nil {
-			s.mu.Unlock()
-			http.Error(w, `{"error":"cannot load built-in server list"}`, http.StatusInternalServerError)
-			return
-		}
-		builtinServers, err := FormatListData(&serversData)
-		if err != nil {
-			s.mu.Unlock()
-			http.Error(w, `{"error":"cannot parse built-in server list"}`, http.StatusInternalServerError)
-			return
-		}
-		if len(req.Servers) > 0 {
-			// Merge: user-specified plus built-in (deduplicate).
-			seen := make(map[string]struct{}, len(servers))
-			for _, sv := range servers {
-				seen[sv] = struct{}{}
-			}
-			for _, sv := range builtinServers {
-				if _, ok := seen[sv]; !ok {
-					servers = append(servers, sv)
-				}
-			}
-		} else {
-			servers = builtinServers
-		}
-	}
-
 	if len(servers) == 0 {
 		s.mu.Unlock()
-		http.Error(w, `{"error":"no servers to test"}`, http.StatusBadRequest)
+		jsonError(w, "no servers to test", http.StatusBadRequest)
 		return
 	}
 
@@ -267,9 +268,7 @@ func (s *GuiServer) handleBenchmarkStart(w http.ResponseWriter, r *http.Request)
 	if err := s.initResources(); err != nil {
 		s.mu.Unlock()
 		log.WithError(err).Error("Failed to initialise resources")
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		jsonError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -285,8 +284,7 @@ func (s *GuiServer) handleBenchmarkStart(w http.ResponseWriter, r *http.Request)
 
 	go s.runBenchmark(ctx, servers, req)
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	jsonOK(w, map[string]interface{}{
 		"status": "started",
 		"total":  len(servers),
 	})
@@ -384,15 +382,9 @@ func (s *GuiServer) runBenchmark(ctx context.Context, servers []string, req benc
 
 // handleBenchmarkStatus is the SSE endpoint for streaming progress events.
 func (s *GuiServer) handleBenchmarkStatus(w http.ResponseWriter, r *http.Request) {
-	setCORS(w)
-	if r.Method == http.MethodOptions {
-		w.WriteHeader(http.StatusNoContent)
-		return
-	}
-
 	flusher, ok := w.(http.Flusher)
 	if !ok {
-		http.Error(w, `{"error":"streaming not supported"}`, http.StatusInternalServerError)
+		jsonError(w, "streaming not supported", http.StatusInternalServerError)
 		return
 	}
 
@@ -447,20 +439,14 @@ func (s *GuiServer) handleBenchmarkStatus(w http.ResponseWriter, r *http.Request
 
 // handleBenchmarkStop cancels a running benchmark and saves partial results.
 func (s *GuiServer) handleBenchmarkStop(w http.ResponseWriter, r *http.Request) {
-	setCORS(w)
-	if r.Method == http.MethodOptions {
-		w.WriteHeader(http.StatusNoContent)
-		return
-	}
-	if r.Method != http.MethodPost {
-		http.Error(w, `{"error":"method not allowed"}`, http.StatusMethodNotAllowed)
+	if !requirePOST(w, r) {
 		return
 	}
 
 	s.mu.Lock()
 	if s.state != stateRunning || s.cancelFn == nil {
 		s.mu.Unlock()
-		http.Error(w, `{"error":"no benchmark running"}`, http.StatusConflict)
+		jsonError(w, "no benchmark running", http.StatusConflict)
 		return
 	}
 	cancel := s.cancelFn
@@ -494,8 +480,7 @@ func (s *GuiServer) handleBenchmarkStop(w http.ResponseWriter, r *http.Request) 
 	log.WithField("results", len(partialResults)).Info("GUI benchmark stopped — partial results saved")
 	s.broadcast(sseEvent{Type: "stopped", Results: partialResults, Message: "benchmark stopped"})
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	jsonOK(w, map[string]interface{}{
 		"status":  "stopped",
 		"results": len(partialResults),
 	})
@@ -503,12 +488,6 @@ func (s *GuiServer) handleBenchmarkStop(w http.ResponseWriter, r *http.Request) 
 
 // handleBenchmarkResults returns the latest benchmark results.
 func (s *GuiServer) handleBenchmarkResults(w http.ResponseWriter, r *http.Request) {
-	setCORS(w)
-	if r.Method == http.MethodOptions {
-		w.WriteHeader(http.StatusNoContent)
-		return
-	}
-
 	s.mu.RLock()
 	results := make(BenchmarkResult, len(s.results))
 	for k, v := range s.results {
@@ -516,25 +495,17 @@ func (s *GuiServer) handleBenchmarkResults(w http.ResponseWriter, r *http.Reques
 	}
 	s.mu.RUnlock()
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(results)
+	jsonOK(w, results)
 }
 
 // handleBenchmarkHistory returns the list of past benchmark runs.
 func (s *GuiServer) handleBenchmarkHistory(w http.ResponseWriter, r *http.Request) {
-	setCORS(w)
-	if r.Method == http.MethodOptions {
-		w.WriteHeader(http.StatusNoContent)
-		return
-	}
-
 	s.historyMu.RLock()
 	hist := make([]benchmarkHistoryEntry, len(s.history))
 	copy(hist, s.history)
 	s.historyMu.RUnlock()
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(hist)
+	jsonOK(w, hist)
 }
 
 // StartGUI initialises the GUI server, opens the browser, and starts serving.
@@ -559,6 +530,9 @@ func StartGUI(port int) {
 	mux.HandleFunc("/api/benchmark/results", srv.handleBenchmarkResults)
 	mux.HandleFunc("/api/benchmark/history", srv.handleBenchmarkHistory)
 
+	// Wrap all routes with CORS middleware.
+	handler := corsMiddleware(mux)
+
 	addr := fmt.Sprintf(":%d", port)
 	url := fmt.Sprintf("http://localhost:%d", port)
 
@@ -576,7 +550,7 @@ func StartGUI(port int) {
 
 	httpServer := &http.Server{
 		Addr:              addr,
-		Handler:           mux,
+		Handler:           handler,
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 

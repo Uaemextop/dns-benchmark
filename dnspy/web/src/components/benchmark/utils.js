@@ -2,6 +2,11 @@
  * Utility functions for benchmark display formatting and scoring.
  */
 
+import {
+  SCORE_THRESHOLDS,
+  LATENCY_THRESHOLDS,
+} from "../../constants";
+
 /** Format seconds into HH:MM:SS or MM:SS. */
 export function formatTime(secs) {
   const h = Math.floor(secs / 3600);
@@ -35,9 +40,9 @@ export function getRankDisplay(index) {
 
 /** Map score value to a NextUI color name. */
 export function getScoreColor(score) {
-  if (score >= 80) return "success";
-  if (score >= 60) return "primary";
-  if (score >= 40) return "warning";
+  if (score >= SCORE_THRESHOLDS.EXCELLENT) return "success";
+  if (score >= SCORE_THRESHOLDS.GOOD) return "primary";
+  if (score >= SCORE_THRESHOLDS.FAIR) return "warning";
   return "danger";
 }
 
@@ -56,9 +61,9 @@ export function countryCodeToFlag(code) {
 
 /** Map latency ms to a Tailwind text color class. */
 export function getLatencyColor(ms) {
-  if (ms < 50) return "text-green-500";
-  if (ms < 150) return "text-yellow-500";
-  if (ms < 300) return "text-orange-500";
+  if (ms < LATENCY_THRESHOLDS.FAST) return "text-green-500";
+  if (ms < LATENCY_THRESHOLDS.MODERATE) return "text-yellow-500";
+  if (ms < LATENCY_THRESHOLDS.SLOW) return "text-orange-500";
   return "text-red-500";
 }
 
