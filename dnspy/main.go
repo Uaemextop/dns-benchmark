@@ -46,6 +46,12 @@ func main() {
 
 	InitLog(Cfg.LogJSON, Cfg.LogLevel)
 
+	// GUI mode: start the web server instead of running CLI benchmark
+	if Cfg.GUI {
+		StartGUI(Cfg.GUIPort)
+		return
+	}
+
 	// Initialize output file
 	OutputPath = Cfg.OutputPath
 	if OutputPath == "" {
